@@ -45,9 +45,43 @@ services:
       retries: 5
     restart: unless-stopped
 
+  # S3_ENDPOINT: http://localhost:9000
+  minio:
+    image: minio/minio:RELEASE.2025-02-18T16-25-55Z
+    ports:
+      - '9000:9000'   # S3 API
+      - '9001:9001'   # Console UI
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    volumes:
+      - miniodata:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    mem_limit: 256m
+    command: server /data --console-address ":9001"
+
+  # Auto-create the default bucket on first run
+  createbuckets:
+    image: minio/mc:RELEASE.2025-02-18T00-47-29Z
+    depends_on:
+      minio:
+        condition: service_healthy
+    restart: "no"
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 minioadmin minioadmin;
+      mc mb --ignore-existing local/innera-attachments;
+      "
+
 volumes:
   pgdata:
   redisdata:
+  miniodata:
 ```
 
 ## Database Connection Pooling
