@@ -1,0 +1,30 @@
+{
+  "name": "@innera/web",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --port 3000",
+    "build": "next build",
+    "clean": "rm -rf .next .turbo",
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@innera/app": "workspace:*",
+    "@innera/shared": "workspace:*",
+    "@innera/ui": "workspace:*",
+    "@tamagui/next-plugin": "^1.116.0",
+    "next": "^15.0.0",
+    "react": "^18.3.0",
+    "react-dom": "^18.3.0",
+    "react-native-web": "^0.19.0",
+    "solito": "^4.0.0",
+    "tamagui": "^1.116.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0",
+    "typescript": "^5.7.3"
+  }
+}

@@ -1,0 +1,25 @@
+node_modules/
+dist/
+.next/
+.expo/
+.turbo/
+*.tsbuildinfo
+
+# env
+.env
+.env.*
+!.env.example
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# test
+coverage/
+
+# build
+out/
+build/

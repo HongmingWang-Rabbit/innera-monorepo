@@ -1,0 +1,37 @@
+{
+  "name": "@innera/mobile",
+  "version": "0.0.1",
+  "private": true,
+  "main": "expo-router/entry",
+  "scripts": {
+    "dev": "expo start --clear",
+    "build:ios": "eas build --platform ios",
+    "build:android": "eas build --platform android",
+    "clean": "rm -rf .expo .turbo",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src/"
+  },
+  "dependencies": {
+    "@innera/app": "workspace:*",
+    "@innera/shared": "workspace:*",
+    "@innera/ui": "workspace:*",
+    "expo": "~52.0.0",
+    "expo-linking": "~7.0.0",
+    "expo-router": "~4.0.0",
+    "expo-status-bar": "~2.0.0",
+    "expo-splash-screen": "~0.29.0",
+    "react": "^18.3.0",
+    "react-native": "^0.76.0",
+    "react-native-safe-area-context": "^5.0.0",
+    "react-native-screens": "~4.4.0",
+    "react-native-gesture-handler": "~2.21.0",
+    "react-native-reanimated": "~3.16.0",
+    "solito": "^4.0.0",
+    "tamagui": "^1.116.0",
+    "@tamagui/config": "^1.116.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.3",
+    "@types/react": "^18.3.0"
+  }
+}

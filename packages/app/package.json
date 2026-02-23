@@ -1,0 +1,30 @@
+{
+  "name": "@innera/app",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "clean": "rm -rf dist .turbo",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src/"
+  },
+  "dependencies": {
+    "@innera/shared": "workspace:*",
+    "@innera/ui": "workspace:*",
+    "solito": "^4.0.0",
+    "tamagui": "^1.116.0"
+  },
+  "peerDependencies": {
+    "react": "^18.3.0",
+    "react-native": "^0.76.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.3",
+    "@types/react": "^18.3.0",
+    "react": "^18.3.0",
+    "react-native": "^0.76.0"
+  }
+}
