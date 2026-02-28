@@ -52,7 +52,8 @@ entries
   circleId        UUID? FK → circles ON DELETE SET NULL
   mood            VARCHAR(20)?
   version         INT DEFAULT 1                      -- for sync conflict detection
-  conflictOf      UUID? FK → entries ON DELETE SET NULL  -- points to original if this is a conflict fork
+  conflictOf      UUID?                                  -- points to original if this is a conflict fork
+                                                         -- Self-referencing FK added via migration SQL (not in Drizzle schema to avoid circular type)
   deletedAt       TIMESTAMPTZ?
   createdAt       TIMESTAMPTZ
   updatedAt       TIMESTAMPTZ
@@ -110,12 +111,13 @@ circles
   status          ENUM('ACTIVE','ARCHIVED') DEFAULT 'ACTIVE'
   maxMembers      INT DEFAULT 20
   createdAt       TIMESTAMPTZ
+  updatedAt       TIMESTAMPTZ DEFAULT now()  -- auto-updated via $onUpdate
 
 circle_memberships
   id              UUID PK
   circleId        UUID FK → circles ON DELETE CASCADE
   userId          UUID FK → users ON DELETE CASCADE
-  role            ENUM('ADMIN','MEMBER') DEFAULT 'MEMBER'
+  role            ENUM('OWNER','ADMIN','MEMBER') DEFAULT 'MEMBER'
   status          ENUM('ACTIVE','LEFT','REMOVED')
   joinedAt        TIMESTAMPTZ
   leftAt          TIMESTAMPTZ?

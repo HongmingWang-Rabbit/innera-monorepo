@@ -21,7 +21,7 @@ export function PartnerScreen() {
   if (isLoading) {
     return (
       <ScreenContainer edges={['top']} scrollable>
-        <Text fontSize="$6" fontWeight="700" color="$color">Partner</Text>
+        <Text variant="subheading">Partner</Text>
         <YStack alignItems="center" padding="$6">
           <Spinner size="large" />
         </YStack>
@@ -85,7 +85,7 @@ function NoPartnerState() {
 
   return (
     <ScreenContainer edges={['top']} scrollable>
-      <Text fontSize="$6" fontWeight="700" color="$color">Partner</Text>
+      <Text variant="subheading">Partner</Text>
 
       <EmptyState
         icon={<Heart size={40} color={palette.pink500} />}
@@ -96,12 +96,12 @@ function NoPartnerState() {
       <YStack gap="$3">
         <Card padding="md">
           <YStack gap="$3">
-            <Text fontSize="$4" fontWeight="600" color="$color">
+            <Text variant="label">
               Send an Invite
             </Text>
             {generatedCode ? (
               <YStack gap="$2">
-                <Text fontSize="$2" color="$colorSubtle">
+                <Text variant="caption">
                   Share this code with your partner:
                 </Text>
                 <Card padding="sm" backgroundColor="$surface2">
@@ -135,7 +135,7 @@ function NoPartnerState() {
 
         <Card padding="md">
           <YStack gap="$3">
-            <Text fontSize="$4" fontWeight="600" color="$color">
+            <Text variant="label">
               Enter a Code
             </Text>
             <Input
@@ -190,7 +190,7 @@ function PendingState({ partnerLink }: { partnerLink: Pick<PartnerLinkWithPartne
 
   return (
     <ScreenContainer edges={['top']} scrollable>
-      <Text fontSize="$6" fontWeight="700" color="$color">Partner</Text>
+      <Text variant="subheading">Partner</Text>
 
       <Card padding="md">
         <YStack gap="$3" alignItems="center">
@@ -201,10 +201,10 @@ function PendingState({ partnerLink }: { partnerLink: Pick<PartnerLinkWithPartne
           />
           {isReceiver ? (
             <>
-              <Text fontSize="$4" fontWeight="600" color="$color">
+              <Text variant="label">
                 Partner Request
               </Text>
-              <Text fontSize="$3" color="$colorSubtle" textAlign="center">
+              <Text variant="caption" textAlign="center">
                 {partnerLink.partner?.displayName ?? 'Someone'} wants to connect with you as a partner
               </Text>
               <XStack gap="$3" width="100%">
@@ -229,10 +229,10 @@ function PendingState({ partnerLink }: { partnerLink: Pick<PartnerLinkWithPartne
             </>
           ) : (
             <>
-              <Text fontSize="$4" fontWeight="600" color="$color">
+              <Text variant="label">
                 Waiting for response
               </Text>
-              <Text fontSize="$3" color="$colorSubtle" textAlign="center">
+              <Text variant="caption" textAlign="center">
                 Your partner invite is pending. They'll need to accept your code to connect.
               </Text>
             </>
@@ -285,7 +285,7 @@ function ActivePartnerState({ partnerLink }: { partnerLink: Pick<PartnerLinkWith
 
   return (
     <ScreenContainer edges={['top']} scrollable>
-      <Text fontSize="$6" fontWeight="700" color="$color">Partner</Text>
+      <Text variant="subheading">Partner</Text>
 
       <Card padding="none">
         <YStack
@@ -301,10 +301,10 @@ function ActivePartnerState({ partnerLink }: { partnerLink: Pick<PartnerLinkWith
             backgroundColor="$pink3"
           />
           <YStack alignItems="center" gap="$1">
-            <Text fontSize="$5" fontWeight="700" color="$color">
+            <Text variant="label">
               {partnerLink.partner?.displayName ?? 'Your Partner'}
             </Text>
-            <Text fontSize="$2" color="$colorSubtle">
+            <Text variant="caption">
               Connected since {connectedDate}
             </Text>
           </YStack>
@@ -312,10 +312,10 @@ function ActivePartnerState({ partnerLink }: { partnerLink: Pick<PartnerLinkWith
       </Card>
 
       <YStack gap="$2">
-        <Text fontSize="$4" fontWeight="600" color="$color">
+        <Text variant="label">
           Shared Entries
         </Text>
-        <Text fontSize="$3" color="$colorSubtle">
+        <Text variant="caption">
           Entries shared between you and your partner will appear here.
         </Text>
       </YStack>

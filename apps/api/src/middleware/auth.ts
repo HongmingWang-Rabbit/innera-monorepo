@@ -23,8 +23,8 @@ export interface AuthUser {
 async function verifyToken(token: string): Promise<AuthUser> {
   const { payload } = await jwtVerify(token, getJwtSecret(), {
     algorithms: ['HS256'],
-    audience: 'access',
-    issuer: 'innera-api',
+    audience: 'innera-api',
+    issuer: 'innera',
   });
 
   const id = payload['sub'];
@@ -38,6 +38,23 @@ async function verifyToken(token: string): Promise<AuthUser> {
   }
 
   return { id, email };
+}
+
+async function checkTokenRevocation(request: FastifyRequest, userId: string, token: string): Promise<void> {
+  const redis = (request.server as unknown as { redis?: { get(key: string): Promise<string | null> } }).redis;
+  if (!redis) return; // Skip revocation check if Redis unavailable
+
+  const revoked = await redis.get(`token:revoked:${token}`);
+  if (revoked) {
+    throw new AppError('UNAUTHORIZED', 401, 'Token has been revoked');
+  }
+
+  // Check if all sessions were invalidated after this token was issued
+  const allRevoked = await redis.get(`user:tokens:revoked_all:${userId}`);
+  if (allRevoked) {
+    // Token was issued before the revocation timestamp
+    throw new AppError('UNAUTHORIZED', 401, 'All sessions have been invalidated');
+  }
 }
 
 function extractBearerToken(request: FastifyRequest): string | null {
@@ -67,6 +84,7 @@ export async function authenticate(
   let authUser: AuthUser;
   try {
     authUser = await verifyToken(token);
+    await checkTokenRevocation(request, authUser.id, token);
   } catch (err) {
     if (err instanceof AppError) {
       throw err;
@@ -114,6 +132,7 @@ export async function optionalAuth(
   let authUser: AuthUser;
   try {
     authUser = await verifyToken(token);
+    await checkTokenRevocation(request, authUser.id, token);
   } catch (err) {
     request.log.debug({ err }, 'Optional auth: token verification failed');
     request.user = undefined;

@@ -49,9 +49,8 @@ function SectionHeader({
     <XStack alignItems="center" gap="$2" paddingTop="$2">
       {icon}
       <Text
-        fontSize="$3"
+        variant="caption"
         fontWeight="600"
-        color="$colorSubtle"
         textTransform="uppercase"
         letterSpacing={0.5}
       >
@@ -81,13 +80,9 @@ const SettingsRow = React.memo(function SettingsRow({
       <XStack flex={1} gap="$3" alignItems="center" marginRight="$3">
         {icon}
         <YStack flex={1} gap="$1">
-          <Text fontSize="$3" color="$color">
-            {label}
-          </Text>
+          <Text variant="label">{label}</Text>
           {description && (
-            <Text fontSize="$2" color="$colorSubtle">
-              {description}
-            </Text>
+            <Text variant="caption">{description}</Text>
           )}
         </YStack>
       </XStack>
@@ -130,7 +125,7 @@ export function SettingsScreen() {
   if (isLoading && !settings) {
     return (
       <ScreenContainer edges={['top']} scrollable>
-        <Text fontSize="$6" fontWeight="700" color="$color">Settings</Text>
+        <Text variant="subheading">Settings</Text>
         <YStack alignItems="center" padding="$6">
           <Spinner size="large" />
         </YStack>
@@ -140,17 +135,15 @@ export function SettingsScreen() {
 
   return (
     <ScreenContainer edges={['top']} scrollable>
-      <Text fontSize="$6" fontWeight="700" color="$color">
-        Settings
-      </Text>
+      <Text variant="subheading">Settings</Text>
 
       {isGuest && (
         <Card padding="md" backgroundColor="$yellow3">
           <YStack gap="$2" alignItems="center">
-            <Text fontSize="$3" fontWeight="600" color="$color">
+            <Text variant="label">
               You're in guest mode
             </Text>
-            <Text fontSize="$2" color="$colorSubtle" textAlign="center">
+            <Text variant="caption" textAlign="center">
               Sign in to save your data and access all features.
             </Text>
             <Button size="sm" onPress={() => router.replace(Routes.Login)}>
@@ -163,10 +156,10 @@ export function SettingsScreen() {
       {updateSettings.isError && (
         <Card padding="md" backgroundColor="$red3">
           <YStack gap="$2" alignItems="center">
-            <Text fontSize="$3" fontWeight="600" color="$danger">
+            <Text variant="label" color="$danger">
               Failed to save settings
             </Text>
-            <Text fontSize="$2" color="$colorSubtle" textAlign="center">
+            <Text variant="caption" textAlign="center">
               {updateSettings.error instanceof Error
                 ? updateSettings.error.message
                 : 'Your changes could not be saved. Please try again.'}
@@ -189,7 +182,7 @@ export function SettingsScreen() {
         />
         <Card padding="sm">
           <YStack gap="$1">
-            <Text fontSize="$3" color="$color" marginBottom="$2">
+            <Text variant="label" marginBottom="$2">
               Theme
             </Text>
             <View accessibilityRole="radiogroup">
@@ -374,7 +367,7 @@ export function SettingsScreen() {
       </Button>
 
       <YStack alignItems="center" paddingVertical="$2">
-        <Text fontSize="$2" color="$colorSubtle">
+        <Text variant="caption">
           innera v{APP_VERSION}
         </Text>
       </YStack>

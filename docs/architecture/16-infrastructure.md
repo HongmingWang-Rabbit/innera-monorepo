@@ -9,13 +9,13 @@
 ```yaml
 services:
   postgres:
-    image: postgres:16-alpine
+    image: postgres:16.6-alpine
     environment:
       POSTGRES_DB: innera
       POSTGRES_USER: innera
       POSTGRES_PASSWORD: innera_dev
     ports:
-      - '5432:5432'
+      - '127.0.0.1:5432:5432'
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -31,9 +31,9 @@ services:
       -c shared_buffers=256MB
 
   redis:
-    image: redis:7-alpine
+    image: redis:7.4-alpine
     ports:
-      - '6379:6379'
+      - '127.0.0.1:6379:6379'
     volumes:
       - redisdata:/data
     # REDIS_URL=redis://:devpassword@localhost:6379
@@ -49,8 +49,8 @@ services:
   minio:
     image: minio/minio:RELEASE.2025-02-18T16-25-55Z
     ports:
-      - '9000:9000'   # S3 API
-      - '9001:9001'   # Console UI
+      - '127.0.0.1:9000:9000'   # S3 API
+      - '127.0.0.1:9001:9001'   # Console UI
     environment:
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin
@@ -86,41 +86,54 @@ volumes:
 
 ## Database Connection Pooling
 
+The DB client uses **lazy initialization** — the pool and Drizzle instance are only created on first access. This prevents crashes during import for packages that depend on `@innera/db` but don't need a DB connection (e.g., schema-only imports in tests or build steps).
+
 ```typescript
 // packages/db/src/client.ts
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
 
-const pool = new Pool({
-  connectionString: DATABASE_URL,
-  max: parseInt(process.env.DB_POOL_MAX ?? '20', 10),
-  min: parseInt(process.env.DB_POOL_MIN ?? '5', 10),
-  idleTimeoutMillis: parseInt(process.env.DB_IDLE_TIMEOUT_MS ?? '30000', 10),
-  connectionTimeoutMillis: parseInt(process.env.DB_CONNECTION_TIMEOUT_MS ?? '5000', 10),
-  ssl: process.env.DB_SSL === 'false' ? false
-    : (process.env.NODE_ENV === 'production'
-      ? { rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED !== 'false' }
-      : false),
-});
-
-// Monitor pool health
-pool.on('error', (err) => {
-  logger.error({ err }, 'Unexpected DB pool error');
-});
-
-// Expose for health check
-export async function checkDbHealth(): Promise<boolean> {
-  try {
-    const client = await pool.connect();
-    await client.query('SELECT 1');
-    client.release();
-    return true;
-  } catch {
-    return false;
-  }
+function safeParseInt(value: string | undefined, fallback: number): number {
+  if (!value) return fallback;
+  const parsed = Number(value);
+  return Number.isNaN(parsed) ? fallback : parsed;
 }
 
-export const db = drizzle(pool);
+let _pool: Pool | undefined;
+let _db: NodePgDatabase<typeof schema> | undefined;
+
+function createPool(): Pool {
+  const connectionString = process.env['DATABASE_URL'];
+  if (!connectionString) {
+    throw new Error('DATABASE_URL environment variable is not set');
+  }
+  const p = new Pool({
+    connectionString,
+    max: safeParseInt(process.env['DB_POOL_MAX'], 20),
+    min: safeParseInt(process.env['DB_POOL_MIN'], 5),
+    // ... ssl, timeouts
+  });
+  p.on('error', (err) => { console.error('Unexpected DB pool error', err); });
+  return p;
+}
+
+export function getPool(): Pool {
+  if (!_pool) { _pool = createPool(); }
+  return _pool;
+}
+
+export function getDb(): NodePgDatabase<typeof schema> {
+  if (!_db) { _db = drizzle(getPool(), { schema }); }
+  return _db;
+}
+
+// Backwards-compatible exports via Proxy (lazy access)
+export const pool: Pool = new Proxy({} as Pool, {
+  get(_, prop) { return Reflect.get(getPool(), prop); },
+});
+export const db = new Proxy({} as NodePgDatabase<typeof schema>, {
+  get(_, prop) { return Reflect.get(getDb(), prop); },
+});
 ```
 
 **Sizing guidance:**
@@ -140,7 +153,8 @@ Example:
 | Use Case | Key Pattern | TTL |
 |----------|------------|-----|
 | Refresh tokens | `rt:{SHA256(token)}` → `{ userId, createdAt }` | 30 days |
-| Rate limit counters | `rl:{route}:{ip or userId}` | auto (plugin managed) |
+| Rate limit counters | `rl:{route}:{ip or userId}` | auto (plugin managed, Redis-backed store) |
+| Token revocation | `token:revoked:{token}` | remaining JWT TTL |
 | Push notification queue | BullMQ queue `push-notifications` | until processed |
 | Notification unread count cache | `notif:unread:{userId}` | 5 min |
 | Idempotency cache | `idempotency:{userId}:{key}` → `{ statusCode, body }` | 24 hours |

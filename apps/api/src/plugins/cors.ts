@@ -39,7 +39,7 @@ export default fp(
         if (allowedOrigins.includes(origin)) {
           cb(null, true);
         } else {
-          cb(new AppError('CORS_REJECTED', 403, 'Origin not allowed by CORS'), false);
+          cb(new AppError('CORS_ORIGIN_DENIED', 403, 'Origin not allowed by CORS'), false);
         }
       },
       credentials: true,

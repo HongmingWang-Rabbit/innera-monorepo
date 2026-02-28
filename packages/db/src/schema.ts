@@ -184,7 +184,7 @@ export const entries = pgTable(
     circleId: uuid('circle_id').references(() => circles.id, { onDelete: 'restrict' }),
     mood: varchar('mood', { length: 20 }),
     version: integer('version').default(1).notNull(),
-    conflictOf: uuid('conflict_of'), // FK to entries.id — self-reference added via migration to avoid TS circular inference
+    conflictOf: uuid('conflict_of'), // FK to entries.id — self-reference added via migration SQL to avoid TS circular inference
     deletedAt: timestamp('deleted_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     // Uses app-server clock. For distributed deployments, consider DB-level triggers.

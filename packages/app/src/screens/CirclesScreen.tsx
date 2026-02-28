@@ -9,6 +9,13 @@ import { palette } from '../constants';
 import { useRouter } from '../navigation';
 import { useCircles, useCreateCircle } from '../hooks/use-circles';
 
+type CirclePlaceholder = {
+  id: string;
+  name: string;
+  memberCount: number;
+  color: '$blue3' | '$green3' | '$purple3' | '$pink3' | '$yellow3';
+};
+
 const CIRCLE_COLORS = [
   { bg: '$blue3', icon: palette.blue500 },
   { bg: '$green3', icon: palette.green500 },
@@ -57,9 +64,7 @@ export function CirclesScreen() {
       }
     >
       <XStack justifyContent="space-between" alignItems="center">
-        <Text fontSize="$6" fontWeight="700" color="$color">
-          Circles
-        </Text>
+        <Text variant="subheading">Circles</Text>
         <Button
           size="sm"
           accessibilityLabel={showCreateForm ? 'Cancel creating circle' : 'Create new circle'}
@@ -91,7 +96,7 @@ export function CirclesScreen() {
       {showCreateForm && (
         <Card padding="md">
           <YStack gap="$3">
-            <Text fontSize="$4" fontWeight="600" color="$color">Create Circle</Text>
+            <Text variant="label">Create Circle</Text>
             <Input
               placeholder="Circle name"
               value={newName}
@@ -147,6 +152,7 @@ export function CirclesScreen() {
                 pressable
                 accessibilityRole="button"
                 accessibilityLabel={`View ${circle.name} circle`}
+                accessibilityHint="Opens circle detail"
                 onPress={() => router.push(`/circles/${circle.id}`)}
               >
                 <XStack alignItems="center" gap="$3">
@@ -156,10 +162,8 @@ export function CirclesScreen() {
                     backgroundColor={colors.bg}
                   />
                   <YStack flex={1} gap="$1">
-                    <Text fontSize="$4" fontWeight="600" color="$color">
-                      {circle.name}
-                    </Text>
-                    <Text fontSize="$2" color="$colorSubtle">
+                    <Text variant="label">{circle.name}</Text>
+                    <Text variant="caption">
                       {circle.memberCount} member{circle.memberCount !== 1 ? 's' : ''}
                     </Text>
                   </YStack>

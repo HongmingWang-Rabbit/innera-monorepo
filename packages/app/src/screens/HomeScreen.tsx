@@ -79,10 +79,10 @@ export function HomeScreen() {
         paddingBottom="$5"
         gap="$2"
       >
-        <Text fontSize="$7" fontWeight="700" color="$color">
+        <Text variant="subheading">
           {greeting}, {displayName}
         </Text>
-        <Text fontSize="$3" color="$colorSubtle">
+        <Text variant="caption">
           How are you feeling today?
         </Text>
       </YStack>
@@ -119,7 +119,7 @@ export function HomeScreen() {
         </XStack>
 
         <YStack gap="$3">
-          <Text fontSize="$4" fontWeight="600" color="$color">
+          <Text variant="label">
             Recent Entries
           </Text>
 
@@ -187,19 +187,18 @@ function EntryCard({ entry }: { entry: EntryResponse }) {
         />
         <YStack flex={1} padding="$3" gap="$2">
           <XStack justifyContent="space-between" alignItems="center">
-            <Text fontSize="$3" fontWeight="600" color="$color">
+            <Text variant="label">
               {title}
             </Text>
             <XStack alignItems="center" gap="$1">
-              <Text fontSize="$2" color="$colorSubtle">
+              <Text variant="caption">
                 {VISIBILITY_CONFIG[entry.visibility]?.label ?? entry.visibility}
               </Text>
               <ChevronRight size={14} color="$colorSubtle" />
             </XStack>
           </XStack>
           <Text
-            fontSize="$3"
-            color="$colorSubtle"
+            variant="caption"
             numberOfLines={2}
           >
             {preview}

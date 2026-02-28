@@ -121,11 +121,7 @@ export const ApprovalDecision = {
 export type ApprovalDecision = (typeof ApprovalDecision)[keyof typeof ApprovalDecision];
 
 // ---- Pagination ----
-
-export interface PaginationParams {
-  cursor?: string;
-  limit?: number;
-}
+// Use PaginationInput and PaginatedResponse inferred types from schemas/index.ts
 
 export interface PaginatedResponse<T> {
   data: T[];
@@ -153,6 +149,11 @@ export type WsClientMessage =
 
 export interface WsAuthOkMessage {
   type: 'auth_ok';
+}
+
+export interface WsErrorMessage {
+  type: 'error';
+  payload: { code: string; message: string };
 }
 
 export interface WsNotificationMessage {
@@ -191,6 +192,7 @@ export interface WsPongMessage {
 
 export type WsServerMessage =
   | WsAuthOkMessage
+  | WsErrorMessage
   | WsNotificationMessage
   | WsUnreadCountMessage
   | WsCommentAddedMessage

@@ -30,5 +30,5 @@ export default fp(
       }),
     });
   },
-  { name: 'rate-limit-plugin' },
+  { name: 'rate-limit-plugin', dependencies: ['redis-plugin'] },
 );

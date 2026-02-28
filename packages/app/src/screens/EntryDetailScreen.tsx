@@ -168,8 +168,8 @@ export function EntryDetailScreen() {
     <ScreenContainer edges={['bottom']} scrollable>
       <XStack justifyContent="space-between" alignItems="center">
         <YStack flex={1}>
-          <Text fontSize="$5" fontWeight="700" color="$color">{title}</Text>
-          {entry.mood && <Text fontSize="$2" color="$colorSubtle">Mood: {entry.mood}</Text>}
+          <Text variant="subheading">{title}</Text>
+          {entry.mood && <Text variant="caption">Mood: {entry.mood}</Text>}
         </YStack>
         {entry.authorId === user?.id && (
           <Button size="sm" variant="secondary" accessibilityLabel="Edit entry" onPress={handleEdit}>
@@ -183,30 +183,30 @@ export function EntryDetailScreen() {
           <XStack justifyContent="space-between" alignItems="center">
             <XStack alignItems="center" gap="$2">
               {visIcon}
-              <Text fontSize="$3" fontWeight="600" color="$color">Visibility</Text>
+              <Text variant="label">Visibility</Text>
             </XStack>
             <Badge variant={VISIBILITY_BADGE_VARIANT}>{visEntry.label}</Badge>
           </XStack>
           <YStack gap="$1">
             <XStack alignItems="center" gap="$2">
               <Calendar size={14} color="$colorSubtle" />
-              <Text fontSize="$2" color="$colorSubtle">Created</Text>
+              <Text variant="caption">Created</Text>
             </XStack>
-            <Text fontSize="$3" color="$color" paddingLeft="$6">{createdDate}</Text>
+            <Text variant="label" paddingLeft="$6">{createdDate}</Text>
           </YStack>
         </YStack>
       </Card>
 
       <Card flex={1} padding="lg" variant="flat">
         <YStack gap="$3" flex={1}>
-          <Text fontSize="$3" fontWeight="600" color="$color">Content</Text>
+          <Text variant="label">Content</Text>
           <Text fontSize="$4" color="$color" lineHeight="$7">{content}</Text>
         </YStack>
       </Card>
 
       {/* Reactions */}
       <YStack gap="$2">
-        <Text fontSize="$3" fontWeight="600" color="$color">Reactions</Text>
+        <Text variant="label">Reactions</Text>
         <XStack gap="$2" flexWrap="wrap">
           {EMOJI_OPTIONS.map((emoji) => {
             const group = reactionGroups.find((r) => r.emoji === emoji);
@@ -230,7 +230,7 @@ export function EntryDetailScreen() {
       <YStack gap="$3">
         <XStack alignItems="center" gap="$2">
           <MessageCircle size={16} color="$colorSubtle" />
-          <Text fontSize="$3" fontWeight="600" color="$color">
+          <Text variant="label">
             Comments {allComments.length > 0 ? `(${allComments.length})` : ''}
           </Text>
         </XStack>
@@ -292,7 +292,7 @@ function CommentCard({ comment }: { comment: { id: string; contentEncrypted: str
         <Text fontSize="$3" color="$color">
           {content}
         </Text>
-        <Text fontSize="$1" color="$colorSubtle">
+        <Text variant="caption">
           {formatDate(comment.createdAt)}
         </Text>
       </YStack>

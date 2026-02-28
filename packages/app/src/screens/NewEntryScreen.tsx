@@ -140,10 +140,10 @@ export function NewEntryScreen() {
   return (
     <ScreenContainer edges={['bottom']} scrollable={false} dismissKeyboard>
       <XStack justifyContent="space-between" alignItems="center">
-        <Text fontSize="$5" fontWeight="700" color="$color">
+        <Text variant="subheading">
           {isEdit ? 'Edit Entry' : 'New Entry'}
         </Text>
-        <Text fontSize="$2" color="$colorSubtle">
+        <Text variant="caption">
           {todayLabel}
         </Text>
       </XStack>
@@ -151,7 +151,7 @@ export function NewEntryScreen() {
       <Card flex={1} padding="sm">
         <YStack flex={1} gap="$2">
           <XStack justifyContent="space-between" alignItems="center">
-            <Text fontSize="$2" color="$colorSubtle">
+            <Text variant="caption">
               Markdown supported
             </Text>
             {keyboardVisible && (
@@ -187,7 +187,7 @@ export function NewEntryScreen() {
       </Card>
 
       <YStack gap="$2">
-        <Text fontSize="$3" fontWeight="600" color="$color">
+        <Text variant="label">
           Visibility
         </Text>
         <XStack gap="$2" flexWrap="wrap">
@@ -208,16 +208,15 @@ export function NewEntryScreen() {
                 <YStack gap="$1" alignItems="center">
                   {getVisibilityIcon(option.value)}
                   <Text
-                    fontSize="$2"
-                    fontWeight="600"
+                    variant="label"
                     color={selected ? '$blue10' : '$color'}
                   >
                     {option.label}
                   </Text>
                   <Text
-                    fontSize="$1"
-                    color={selected ? '$blue8' : '$colorSubtle'}
+                    variant="caption"
                     textAlign="center"
+                    color={selected ? '$blue8' : '$colorSubtle'}
                   >
                     {option.description}
                   </Text>

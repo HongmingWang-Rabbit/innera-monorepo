@@ -4,7 +4,7 @@ import { authenticate } from '../../middleware/auth.js';
 const accountRoutes: FastifyPluginAsync = async (app) => {
   /**
    * POST /v1/account/delete
-   * Schedule account deletion. A 30-day grace period applies before data is purged.
+   * Schedule account deletion. A 7-day grace period applies before data is purged.
    */
   app.post('/account/delete', {
     preHandler: [authenticate],

@@ -8,13 +8,31 @@ import {
   ThemePreference,
 } from '../types/index';
 
+// ---- Helpers ----
+
+function enumValues<T extends Record<string, string>>(obj: T): [T[keyof T], ...T[keyof T][]] {
+  return Object.values(obj) as [T[keyof T], ...T[keyof T][]];
+}
+
 // ---- Enum value arrays derived from type const objects ----
 
-const visibilityValues = Object.values(Visibility) as [Visibility, ...Visibility[]];
-const historyPolicyValues = Object.values(HistoryPolicy) as [HistoryPolicy, ...HistoryPolicy[]];
-const platformValues = Object.values(Platform) as [Platform, ...Platform[]];
+const visibilityValues = enumValues(Visibility);
+const historyPolicyValues = enumValues(HistoryPolicy);
+const platformValues = enumValues(Platform);
 const partnerLinkStatusValues = Object.values(PartnerLinkStatus) as [PartnerLinkStatus, ...PartnerLinkStatus[]];
 const notificationTypeValues = Object.values(NotificationType) as [NotificationType, ...NotificationType[]];
+
+// ---- Constants ----
+
+export const MAX_ATTACHMENT_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
+
+export const ALLOWED_ATTACHMENT_MIME_TYPES = [
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/heic',
+  'video/mp4',
+] as const;
 
 const themeValues = Object.values(ThemePreference) as [ThemePreference, ...ThemePreference[]];
 
@@ -22,6 +40,23 @@ const themeValues = Object.values(ThemePreference) as [ThemePreference, ...Theme
 
 const BASE64_REGEX = /^(?:[A-Za-z0-9+\/]{4})*(?:[A-Za-z0-9+\/]{2}==|[A-Za-z0-9+\/]{3}=|[A-Za-z0-9+\/]{4})$/;
 const BASE64_ERROR = 'Invalid base64 encoding';
+
+/** Reusable UUID params schema for route validation. */
+export const uuidParamsSchema = {
+  type: 'object' as const,
+  required: ['id'] as const,
+  properties: {
+    id: { type: 'string' as const, format: 'uuid' as const },
+  },
+};
+
+// ---- Validation helpers ----
+
+function requireAtLeastOneField(data: Record<string, unknown>): boolean {
+  return Object.values(data).some((v) => v !== undefined);
+}
+
+const atLeastOneFieldMessage = 'At least one field must be provided';
 
 // ---- Auth ----
 
@@ -127,10 +162,7 @@ export const createCircleSchema = z.object({
 export const updateCircleSchema = z.object({
   name: z.string().trim().min(1).max(100).optional(),
   description: z.string().trim().min(1).max(500).optional().nullable(),
-}).refine(
-  (data) => Object.values(data).some((v) => v !== undefined),
-  { message: 'At least one field must be provided' },
-);
+}).refine(requireAtLeastOneField, { message: atLeastOneFieldMessage });
 
 export const joinCircleSchema = z.object({
   inviteCode: z.string().trim().min(1),
@@ -230,20 +262,13 @@ export const registerPushTokenSchema = z.object({
 
 // ---- Attachments ----
 
-export const MAX_ATTACHMENT_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
-
-export const ALLOWED_MIME_TYPES = [
-  'image/jpeg',
-  'image/png',
-  'image/webp',
-  'image/heic',
-  'video/mp4',
-] as const;
+// Re-export for backwards compatibility (use ALLOWED_ATTACHMENT_MIME_TYPES above)
+export const ALLOWED_MIME_TYPES = ALLOWED_ATTACHMENT_MIME_TYPES;
 
 export const presignAttachmentSchema = z.object({
   entryId: z.guid(),
   fileName: z.string().trim().min(1).max(255),
-  mimeType: z.enum(ALLOWED_MIME_TYPES),
+  mimeType: z.enum(ALLOWED_ATTACHMENT_MIME_TYPES),
 });
 
 export const confirmAttachmentSchema = z.object({
@@ -263,20 +288,14 @@ export const updateSettingsSchema = z.object({
   defaultVisibility: z.enum(visibilityValues).optional(),
   locale: z.string().trim().min(1).max(10).optional(),
   timezone: z.string().trim().max(50).optional().nullable(),
-}).refine(
-  (data) => Object.values(data).some((v) => v !== undefined),
-  { message: 'At least one field must be provided' },
-);
+}).refine(requireAtLeastOneField, { message: atLeastOneFieldMessage });
 
 // ---- Users ----
 
 export const updateUserSchema = z.object({
   displayName: z.string().trim().min(1).max(100).optional(),
   avatarUrl: z.url().refine((u) => u.startsWith('https://'), 'Avatar URL must use HTTPS').optional().nullable(),
-}).refine(
-  (data) => Object.values(data).some((v) => v !== undefined),
-  { message: 'At least one field must be provided' },
-);
+}).refine(requireAtLeastOneField, { message: atLeastOneFieldMessage });
 
 export const userResponseSchema = z.object({
   id: z.guid(),
@@ -294,9 +313,8 @@ export const paginationSchema = z.object({
     .refine(Number.isFinite, 'limit must be a finite number'),
 });
 
-export const searchSchema = z.object({
+export const searchSchema = paginationSchema.extend({
   q: z.string().trim().min(1).max(200),
-  cursor: z.string().max(500).optional(),
   limit: z.coerce.number().int().min(1).max(50).default(20)
     .refine(Number.isFinite, 'limit must be a finite number'),
 });
@@ -310,6 +328,22 @@ export const paginatedResponseSchema = <T extends z.ZodTypeAny>(itemSchema: T) =
       limit: z.number().int(),
     }),
   });
+
+// ---- WebSocket Message Schemas ----
+
+export const wsAuthMessageSchema = z.object({
+  type: z.literal('auth'),
+  token: z.string().min(1),
+});
+
+export const wsPingMessageSchema = z.object({
+  type: z.literal('ping'),
+});
+
+export const wsClientMessageSchema = z.discriminatedUnion('type', [
+  wsAuthMessageSchema,
+  wsPingMessageSchema,
+]);
 
 // ---- Inferred Types ----
 
@@ -335,3 +369,9 @@ export type PartnerLinkResponse = z.infer<typeof partnerLinkResponseSchema>;
 export type SettingsResponse = z.infer<typeof settingsResponseSchema>;
 export type PaginationInput = z.infer<typeof paginationSchema>;
 export type SearchInput = z.infer<typeof searchSchema>;
+export type JoinCircleInput = z.infer<typeof joinCircleSchema>;
+export type TransferAdminInput = z.infer<typeof transferAdminSchema>;
+export type PartnerRespondInput = z.infer<typeof partnerRespondSchema>;
+export type RegisterPushTokenInput = z.infer<typeof registerPushTokenSchema>;
+export type PresignAttachmentInput = z.infer<typeof presignAttachmentSchema>;
+export type ConfirmAttachmentInput = z.infer<typeof confirmAttachmentSchema>;

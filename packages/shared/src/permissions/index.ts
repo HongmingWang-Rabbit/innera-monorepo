@@ -1,8 +1,20 @@
-import type { Visibility, CircleRole, HistoryPolicy, MembershipStatus, PartnerLinkStatus } from '../types/index';
+import {
+  Visibility,
+  CircleRole,
+  HistoryPolicy,
+  MembershipStatus,
+  PartnerLinkStatus,
+} from '../types/index';
+import type {
+  Visibility as VisibilityType,
+  CircleRole as CircleRoleType,
+  HistoryPolicy as HistoryPolicyType,
+  MembershipStatus as MembershipStatusType,
+} from '../types/index';
 
 export interface EntryAccess {
   authorId: string;
-  visibility: Visibility;
+  visibility: VisibilityType;
   circleId: string | null;
   createdAt: Date;
   deletedAt: Date | null;
@@ -22,9 +34,9 @@ export interface ViewerContext {
   partnerStatus: PartnerLinkStatus | null;
   circleMemberships: Array<{
     circleId: string;
-    role: CircleRole;
-    status: MembershipStatus;
-    historyPolicy: HistoryPolicy;
+    role: CircleRoleType;
+    status: MembershipStatusType;
+    historyPolicy: HistoryPolicyType;
     joinedAt: Date;
   }>;
 }
@@ -35,7 +47,7 @@ function findActiveMembership(
   circleId: string,
 ) {
   return circleMemberships.find(
-    (m) => m.circleId === circleId && m.status === 'ACTIVE',
+    (m) => m.circleId === circleId && m.status === MembershipStatus.ACTIVE,
   ) ?? null;
 }
 
@@ -51,22 +63,22 @@ export function canViewEntry(entry: EntryAccess, viewer: ViewerContext): boolean
   if (entry.deletedAt) return false;
 
   switch (entry.visibility) {
-    case 'PRIVATE':
+    case Visibility.PRIVATE:
       return false;
 
-    case 'PARTNER':
+    case Visibility.PARTNER:
       return viewer.partnerId === entry.authorId && viewer.partnerStatus === 'ACTIVE';
 
-    case 'CIRCLE': {
+    case Visibility.CIRCLE: {
       if (!entry.circleId) return false;
       const membership = findActiveMembership(viewer.circleMemberships, entry.circleId);
       if (!membership) return false;
       // CIRCLE visibility respects history policy
-      if (membership.historyPolicy === 'ALL') return true;
+      if (membership.historyPolicy === HistoryPolicy.ALL) return true;
       return entry.createdAt >= membership.joinedAt;
     }
 
-    case 'FUTURE_CIRCLE_ONLY': {
+    case Visibility.FUTURE_CIRCLE_ONLY: {
       if (!entry.circleId) return false;
       const membership = findActiveMembership(viewer.circleMemberships, entry.circleId);
       if (!membership) return false;
@@ -101,9 +113,9 @@ export function canDeleteEntry(entry: EntryAccess, viewer: ViewerContext): boole
   if (entry.authorId === viewer.userId) return true;
 
   // Circle admins/owners can delete entries posted to their circle
-  if (entry.circleId && (entry.visibility === 'CIRCLE' || entry.visibility === 'FUTURE_CIRCLE_ONLY')) {
+  if (entry.circleId && (entry.visibility === Visibility.CIRCLE || entry.visibility === Visibility.FUTURE_CIRCLE_ONLY)) {
     const membership = findActiveMembership(viewer.circleMemberships, entry.circleId);
-    if (membership && (membership.role === 'OWNER' || membership.role === 'ADMIN')) {
+    if (membership && (membership.role === CircleRole.OWNER || membership.role === CircleRole.ADMIN)) {
       return true;
     }
   }
@@ -115,8 +127,8 @@ export function canDeleteEntry(entry: EntryAccess, viewer: ViewerContext): boole
  * Returns true if the given circle role has permission to manage circle
  * settings (currently restricted to the OWNER role).
  */
-export function canManageCircle(role: CircleRole): boolean {
-  return role === 'OWNER';
+export function canManageCircle(role: CircleRoleType): boolean {
+  return role === CircleRole.OWNER;
 }
 
 /**
@@ -124,15 +136,15 @@ export function canManageCircle(role: CircleRole): boolean {
  * with the given role. OWNERs can kick anyone except other OWNERs; ADMINs
  * can only kick MEMBERs.
  */
-export function canKickMember(actorRole: CircleRole, targetRole: CircleRole): boolean {
+export function canKickMember(actorRole: CircleRoleType, targetRole: CircleRoleType): boolean {
   // Only OWNER and ADMIN can kick members
-  if (actorRole === 'OWNER') {
+  if (actorRole === CircleRole.OWNER) {
     // OWNER can kick anyone except another OWNER (there shouldn't be multiple, but guard anyway)
-    return targetRole !== 'OWNER';
+    return targetRole !== CircleRole.OWNER;
   }
-  if (actorRole === 'ADMIN') {
+  if (actorRole === CircleRole.ADMIN) {
     // ADMIN can kick MEMBERs only, not OWNER or other ADMINs
-    return targetRole === 'MEMBER';
+    return targetRole === CircleRole.MEMBER;
   }
   return false;
 }

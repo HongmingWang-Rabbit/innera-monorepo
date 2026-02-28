@@ -55,6 +55,25 @@ Layer 4: Mobile (React Native)
 
 ---
 
+## HTTP Security Headers — @fastify/helmet
+
+The API registers `@fastify/helmet` globally to set secure HTTP headers:
+
+```typescript
+import helmet from '@fastify/helmet';
+await app.register(helmet, { global: true });
+```
+
+Helmet sets headers including:
+- `X-Content-Type-Options: nosniff` — prevents MIME sniffing
+- `X-Frame-Options: DENY` — prevents clickjacking
+- `Strict-Transport-Security` — enforces HTTPS
+- `X-DNS-Prefetch-Control` — controls DNS prefetching
+- `X-Download-Options` — prevents IE file execution
+- `X-Permitted-Cross-Domain-Policies` — restricts Adobe cross-domain policies
+
+---
+
 ## CSRF Protection
 
 The web client stores the refresh token in an `httpOnly secure SameSite=Lax` cookie. The `SameSite=Lax` attribute is the primary CSRF defense — cross-origin POST requests from attacker sites will not include the cookie. CORS (`credentials: true` with explicit allowed origins) provides an additional layer. See [Auth doc](./02-auth.md) for token strategy details.

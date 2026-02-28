@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: postgres:16-alpine
+    image: postgres:16.6-alpine
     restart: unless-stopped
     environment:
       POSTGRES_DB: innera
@@ -27,7 +27,7 @@ services:
 
   # REDIS_URL: redis://:devpassword@localhost:6379
   redis:
-    image: redis:7-alpine
+    image: redis:7.4-alpine
     restart: unless-stopped
     ports:
       - '127.0.0.1:6379:6379'

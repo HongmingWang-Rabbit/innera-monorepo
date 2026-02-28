@@ -46,20 +46,13 @@ export function LoginScreen() {
             accessibilityRole="image"
             accessibilityLabel="Innera logo"
           >
-            <Text fontSize="$8" fontWeight="800" color="$background">
+            <Text variant="heading" color="$background">
               I
             </Text>
           </View>
           <YStack alignItems="center" gap="$1">
-            <Text
-              fontSize="$8"
-              fontWeight="800"
-              color="$color"
-              letterSpacing={-1}
-            >
-              innera
-            </Text>
-            <Text fontSize="$3" color="$colorSubtle" textAlign="center">
+            <Text variant="heading">innera</Text>
+            <Text variant="caption" textAlign="center">
               Your private space for growth and connection
             </Text>
           </YStack>
@@ -93,9 +86,7 @@ export function LoginScreen() {
 
           <XStack alignItems="center" gap="$3" marginVertical="$2">
             <Separator flex={1} />
-            <Text fontSize="$2" color="$colorSubtle">
-              or
-            </Text>
+            <Text variant="caption">or</Text>
             <Separator flex={1} />
           </XStack>
 
@@ -112,7 +103,7 @@ export function LoginScreen() {
 
         <YStack alignItems="center" gap="$2">
           <XStack flexWrap="wrap" justifyContent="center" gap="$1">
-            <Text fontSize="$2" color="$colorSubtle">By continuing, you agree to our</Text>
+            <Text variant="caption">By continuing, you agree to our</Text>
             <Text
               fontSize="$2"
               color="$primary"
@@ -123,7 +114,7 @@ export function LoginScreen() {
             >
               Terms of Service
             </Text>
-            <Text fontSize="$2" color="$colorSubtle">and</Text>
+            <Text variant="caption">and</Text>
             <Text
               fontSize="$2"
               color="$primary"
@@ -135,7 +126,7 @@ export function LoginScreen() {
               Privacy Policy
             </Text>
           </XStack>
-          <Text fontSize="$2" color="$colorSubtle" textAlign="center">
+          <Text variant="caption" textAlign="center">
             Your data is end-to-end encrypted.
           </Text>
         </YStack>

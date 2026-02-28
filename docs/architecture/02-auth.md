@@ -68,12 +68,28 @@ Web:    accessToken in memory, refreshToken in httpOnly secure SameSite=Lax cook
 
 **CSRF protection (web):** The `SameSite=Lax` attribute on the refresh token cookie prevents CSRF attacks on state-changing POST endpoints. Cross-origin requests from attacker sites will not include the cookie. This is the primary CSRF defense; CORS provides an additional layer.
 
+## JWT Validation
+
+Access tokens are validated with strict claims:
+
+```typescript
+const { payload } = await jwtVerify(token, getJwtSecret(), {
+  algorithms: ['HS256'],
+  issuer: 'innera',
+  audience: 'innera-api',
+});
+```
+
+- **Issuer (`iss`):** Must be `innera`
+- **Audience (`aud`):** Must be `innera-api`
+- **Algorithm:** HS256 only (prevents algorithm confusion attacks)
+
 ## Session Revocation
 
 - `POST /auth/logout` deletes refresh token from Redis.
 - `POST /auth/logout-all` deletes ALL refresh tokens for the user.
 - Access tokens are short-lived (15 min) — no blacklist needed at MVP.
-- Future: if needed, maintain a Redis-based JWT blacklist with TTL = remaining JWT life.
+- **Token revocation check:** The `authenticate` middleware checks Redis for revoked tokens (`token:revoked:{token}`). If a revoked token is found, the request is rejected with 401. This enables immediate session invalidation when needed (e.g., password change, security incident).
 
 ## Routes
 

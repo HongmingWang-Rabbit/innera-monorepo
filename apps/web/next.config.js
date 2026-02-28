@@ -2,6 +2,7 @@ const { withTamagui } = require('@tamagui/next-plugin');
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  reactStrictMode: true,
   transpilePackages: [
     'react-native',
     'react-native-web',

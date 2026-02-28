@@ -1,6 +1,7 @@
 import React, { useId } from 'react';
 import { styled, type GetProps, type TamaguiElement } from '@tamagui/core';
 import { Input as TamaguiInput, Text, YStack } from 'tamagui';
+import type { TextInput } from 'react-native';
 
 // ---------------------------------------------------------------------------
 // Styled Input
@@ -122,6 +123,7 @@ export const Input = React.forwardRef<TamaguiElement, InputProps>(function Input
   const input = (
     <StyledInput
       ref={ref}
+      accessibilityLabel={accessibilityLabel}
       aria-label={accessibilityLabel}
       aria-invalid={effectiveError ? true : undefined}
       aria-describedby={errorText ? errorId : undefined}

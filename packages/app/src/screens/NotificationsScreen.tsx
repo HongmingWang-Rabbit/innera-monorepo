@@ -99,7 +99,7 @@ export function NotificationsScreen() {
   if (isLoading) {
     return (
       <ScreenContainer edges={['top']} scrollable>
-        <Text fontSize="$6" fontWeight="700" color="$color">Notifications</Text>
+        <Text variant="subheading">Notifications</Text>
         <YStack alignItems="center" padding="$6">
           <Spinner size="large" />
         </YStack>
@@ -116,9 +116,7 @@ export function NotificationsScreen() {
       }
     >
       <XStack justifyContent="space-between" alignItems="center">
-        <Text fontSize="$6" fontWeight="700" color="$color">
-          Notifications
-        </Text>
+        <Text variant="subheading">Notifications</Text>
         {hasUnread && (
           <Button
             variant="ghost"
@@ -144,7 +142,7 @@ export function NotificationsScreen() {
       {todayItems.length > 0 && (
         <YStack gap="$2">
           <Text
-            fontSize="$2" fontWeight="600" color="$colorSubtle"
+            variant="caption" fontWeight="600"
             textTransform="uppercase" letterSpacing={0.5}
           >
             Today
@@ -162,7 +160,7 @@ export function NotificationsScreen() {
       {earlierItems.length > 0 && (
         <YStack gap="$2">
           <Text
-            fontSize="$2" fontWeight="600" color="$colorSubtle"
+            variant="caption" fontWeight="600"
             textTransform="uppercase" letterSpacing={0.5}
           >
             Earlier
@@ -218,20 +216,19 @@ function NotificationCard({
         <YStack flex={1} gap="$1">
           <XStack justifyContent="space-between" alignItems="center">
             <Text
-              fontSize="$3"
+              variant="label"
               fontWeight={notification.read ? '400' : '600'}
-              color="$color"
               flex={1}
               marginRight="$2"
             >
               {notification.title ?? 'Notification'}
             </Text>
-            <Text fontSize="$2" color="$colorSubtle" flexShrink={0}>
+            <Text variant="caption" flexShrink={0}>
               {formatRelativeTime(notification.createdAt)}
             </Text>
           </XStack>
           {notification.body && (
-            <Text fontSize="$2" color="$colorSubtle">
+            <Text variant="caption">
               {notification.body}
             </Text>
           )}

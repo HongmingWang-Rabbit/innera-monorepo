@@ -2,6 +2,7 @@ import { randomUUID, randomBytes } from 'node:crypto';
 import Fastify, { type FastifyError } from 'fastify';
 import cookie from '@fastify/cookie';
 import websocket from '@fastify/websocket';
+import helmet from '@fastify/helmet';
 import { ZodError } from 'zod';
 import { AppError } from '@innera/shared';
 import { pool } from '@innera/db';
@@ -126,6 +127,7 @@ const app = Fastify({
 // ---- Plugin registration ----
 
 await app.register(corsPlugin);
+await app.register(helmet, { global: true });
 await app.register(cookie, {
   secret: process.env['COOKIE_SECRET'] || randomBytes(32).toString('hex'),
 });
@@ -168,13 +170,14 @@ app.setErrorHandler<FastifyError>((error, request, reply) => {
   }
 
   // Fastify validation errors
-  if (error.validation) {
+  const fastifyErr = error as FastifyError;
+  if (fastifyErr.validation) {
     request.log.info({ err: error }, 'Request validation failed');
     return reply.status(400).send({
       statusCode: 400,
       code: 'VALIDATION_ERROR',
       message: 'Invalid request',
-      errors: error.validation.map((v) => ({
+      errors: fastifyErr.validation.map((v: { instancePath?: string; schemaPath: string; message?: string }) => ({
         path: v.instancePath || v.schemaPath,
         message: v.message ?? 'Validation failed',
       })),
@@ -193,7 +196,7 @@ app.setErrorHandler<FastifyError>((error, request, reply) => {
   }
 
   // Rate limit errors from @fastify/rate-limit
-  if (error.statusCode === 429) {
+  if (fastifyErr.statusCode === 429) {
     return reply.status(429).send({
       statusCode: 429,
       code: 'RATE_LIMITED',

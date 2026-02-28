@@ -125,7 +125,6 @@ const ButtonFrame = styled(View, {
       true: {
         opacity: 0.5,
         cursor: 'not-allowed',
-        pointerEvents: 'none',
       },
     },
 
