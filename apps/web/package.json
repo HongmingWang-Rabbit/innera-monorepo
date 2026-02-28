@@ -19,7 +19,7 @@
     "next": "^15.3.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
-    "react-native-web": "~0.22.0",
+    "react-native-web": "~0.21.0",
     "solito": "^4.0.0",
     "tamagui": "^2.0.0-rc.16"
   },
