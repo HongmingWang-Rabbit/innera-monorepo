@@ -38,7 +38,7 @@ const themeValues = Object.values(ThemePreference) as [ThemePreference, ...Theme
 
 // ---- Shared Validation Constants ----
 
-const BASE64_REGEX = /^(?:[A-Za-z0-9+\/]{4})*(?:[A-Za-z0-9+\/]{2}==|[A-Za-z0-9+\/]{3}=|[A-Za-z0-9+\/]{4})$/;
+const BASE64_REGEX = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=|[A-Za-z0-9+/]{4})$/;
 const BASE64_ERROR = 'Invalid base64 encoding';
 
 /** Reusable UUID params schema for route validation. */
@@ -202,6 +202,7 @@ export const commentResponseSchema = z.object({
 
 export const createReactionSchema = z.object({
   emoji: z.string().trim().min(1).max(10).regex(
+    // eslint-disable-next-line no-misleading-character-class -- ZWJ/VS16 in character class is intentional for emoji validation
     /^[\p{Emoji_Presentation}\p{Extended_Pictographic}\u{FE0F}\u{200D}\u{20E3}\u{E0020}-\u{E007F}]+$/u,
     'Must contain only emoji characters',
   ),

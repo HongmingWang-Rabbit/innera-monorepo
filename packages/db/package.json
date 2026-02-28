@@ -14,7 +14,7 @@
     "generate": "drizzle-kit generate",
     "migrate": "drizzle-kit migrate",
     "studio": "drizzle-kit studio",
-    "test:unit": "vitest run",
+    "test:unit": "vitest run --passWithNoTests",
     "lint": "eslint src/"
   },
   "dependencies": {
