@@ -1,79 +1,193 @@
-import React from 'react';
-import { Button, Card, Text, XStack, YStack } from '@innera/ui';
+'use client';
 
-type CirclePlaceholder = {
-  id: string;
-  name: string;
-  memberCount: number;
-  color: string;
-};
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { RefreshControl } from 'react-native';
+import { Button, Card, EmptyState, IconBadge, Input, Spinner, Text, XStack, YStack } from '@innera/ui';
+import { Users, ChevronRight, PlusCircle, X } from '@tamagui/lucide-icons';
+import { ScreenContainer } from '../components';
+import { palette } from '../constants';
+import { useRouter } from '../navigation';
+import { useCircles, useCreateCircle } from '../hooks/use-circles';
 
-const PLACEHOLDER_CIRCLES: CirclePlaceholder[] = [
-  { id: '1', name: 'Close Friends', memberCount: 4, color: '$blue3' },
-  { id: '2', name: 'Family', memberCount: 6, color: '$green3' },
-  { id: '3', name: 'Mindfulness Group', memberCount: 8, color: '$purple3' },
+const CIRCLE_COLORS = [
+  { bg: '$blue3', icon: palette.blue500 },
+  { bg: '$green3', icon: palette.green500 },
+  { bg: '$purple3', icon: palette.purple500 },
+  { bg: '$pink3', icon: palette.pink500 },
 ];
 
 export function CirclesScreen() {
+  const { data: circles, isLoading, isError, isRefetching, refetch } = useCircles();
+  const createCircle = useCreateCircle();
+  const router = useRouter();
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [newDescription, setNewDescription] = useState('');
+  const [error, setError] = useState<string | null>(null);
+
+  // Stable refs for mutation and state values to avoid re-creating callbacks on every render
+  const createCircleRef = useRef(createCircle.mutateAsync);
+  const newNameRef = useRef(newName);
+  const newDescriptionRef = useRef(newDescription);
+  useEffect(() => {
+    createCircleRef.current = createCircle.mutateAsync;
+    newNameRef.current = newName;
+    newDescriptionRef.current = newDescription;
+  });
+
+  const handleCreate = useCallback(async () => {
+    if (!newNameRef.current.trim()) return;
+    setError(null);
+    try {
+      await createCircleRef.current({ name: newNameRef.current.trim(), description: newDescriptionRef.current.trim() || undefined });
+      setShowCreateForm(false);
+      setNewName('');
+      setNewDescription('');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to create circle');
+    }
+  }, []);
+
   return (
-    <YStack flex={1} backgroundColor="$background" padding="$4" gap="$4">
+    <ScreenContainer
+      edges={['top']}
+      scrollable
+      refreshControl={
+        <RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} />
+      }
+    >
       <XStack justifyContent="space-between" alignItems="center">
         <Text fontSize="$6" fontWeight="700" color="$color">
           Circles
         </Text>
-        <Button size="sm" accessibilityLabel="Create new circle">
-          + New Circle
+        <Button
+          size="sm"
+          accessibilityLabel={showCreateForm ? 'Cancel creating circle' : 'Create new circle'}
+          onPress={() => {
+            setShowCreateForm((v) => {
+              if (v) {
+                // Clearing form state when closing the create form
+                setNewName('');
+                setNewDescription('');
+                setError(null);
+              }
+              return !v;
+            });
+          }}
+        >
+          <XStack alignItems="center" gap="$1">
+            {showCreateForm ? (
+              <X size={14} color="$primaryColor" />
+            ) : (
+              <PlusCircle size={14} color="$primaryColor" />
+            )}
+            <Text fontSize="$3" fontWeight="600" color="$primaryColor">
+              {showCreateForm ? 'Cancel' : 'New'}
+            </Text>
+          </XStack>
         </Button>
       </XStack>
 
-      <YStack gap="$3">
-        {PLACEHOLDER_CIRCLES.map((circle) => (
-          <Card
-            key={circle.id}
-            padding="md"
-            pressStyle={{ scale: 0.98 }}
-            accessibilityRole="button"
-            accessibilityLabel={`View ${circle.name} circle`}
-          >
-            <XStack alignItems="center" gap="$3">
-              <Card
-                width={48}
-                height={48}
-                borderRadius="$8"
-                backgroundColor={circle.color}
-                alignItems="center"
-                justifyContent="center"
-              >
-                <Text fontSize="$5">
-                </Text>
-              </Card>
-              <YStack flex={1} gap="$1">
-                <Text fontSize="$4" fontWeight="600" color="$color">
-                  {circle.name}
-                </Text>
-                <Text fontSize="$2" color="$colorSubtle">
-                  {circle.memberCount} members
-                </Text>
-              </YStack>
-              <Text fontSize="$4" color="$colorSubtle">
-                {'>'}
-              </Text>
-            </XStack>
-          </Card>
-        ))}
-      </YStack>
+      {showCreateForm && (
+        <Card padding="md">
+          <YStack gap="$3">
+            <Text fontSize="$4" fontWeight="600" color="$color">Create Circle</Text>
+            <Input
+              placeholder="Circle name"
+              value={newName}
+              onChangeText={setNewName}
+              aria-label="Circle name"
+              maxLength={100}
+            />
+            <Input
+              placeholder="Description (optional)"
+              value={newDescription}
+              onChangeText={setNewDescription}
+              aria-label="Circle description"
+              maxLength={500}
+            />
+            {error && <Text fontSize="$2" color="$danger">{error}</Text>}
+            <Button
+              size="md"
+              fullWidth
+              disabled={!newName.trim() || createCircle.isPending}
+              loading={createCircle.isPending}
+              onPress={handleCreate}
+            >
+              Create Circle
+            </Button>
+          </YStack>
+        </Card>
+      )}
 
-      <Card padding="lg" alignItems="center" gap="$3" marginTop="$2">
-        <Text fontSize="$4" fontWeight="600" color="$color">
-          Create a Circle
-        </Text>
-        <Text fontSize="$3" color="$colorSubtle" textAlign="center">
-          Circles let you share journal entries with trusted groups of people
-        </Text>
-        <Button size="md" variant="secondary" accessibilityLabel="Get started creating a circle">
-          Get Started
-        </Button>
-      </Card>
-    </YStack>
+      {isLoading && (
+        <YStack alignItems="center" padding="$6">
+          <Spinner size="large" />
+        </YStack>
+      )}
+
+      {isError && (
+        <Card padding="md">
+          <YStack gap="$2" alignItems="center">
+            <Text fontSize="$3" color="$danger">Failed to load circles</Text>
+            <Button size="sm" variant="secondary" onPress={() => void refetch()}>Retry</Button>
+          </YStack>
+        </Card>
+      )}
+
+      {!isLoading && !isError && circles && circles.length > 0 && (
+        <YStack gap="$3">
+          {circles.map((circle) => {
+            const colorIndex = circle.id.split('').reduce((acc: number, char: string) => acc + char.charCodeAt(0), 0);
+            const colors = CIRCLE_COLORS[colorIndex % CIRCLE_COLORS.length]!;
+            return (
+              <Card
+                key={circle.id}
+                padding="md"
+                pressable
+                accessibilityRole="button"
+                accessibilityLabel={`View ${circle.name} circle`}
+                onPress={() => router.push(`/circles/${circle.id}`)}
+              >
+                <XStack alignItems="center" gap="$3">
+                  <IconBadge
+                    icon={<Users size={20} color={colors.icon} />}
+                    size={48}
+                    backgroundColor={colors.bg}
+                  />
+                  <YStack flex={1} gap="$1">
+                    <Text fontSize="$4" fontWeight="600" color="$color">
+                      {circle.name}
+                    </Text>
+                    <Text fontSize="$2" color="$colorSubtle">
+                      {circle.memberCount} member{circle.memberCount !== 1 ? 's' : ''}
+                    </Text>
+                  </YStack>
+                  <ChevronRight size={20} color="$colorSubtle" />
+                </XStack>
+              </Card>
+            );
+          })}
+        </YStack>
+      )}
+
+      {!isLoading && !isError && (!circles || circles.length === 0) && !showCreateForm && (
+        <EmptyState
+          icon={<Users size={36} color="$colorSubtle" />}
+          title="Create a Circle"
+          description="Circles let you share journal entries with trusted groups of people"
+          action={
+            <Button
+              size="md"
+              variant="secondary"
+              accessibilityLabel="Get started creating a circle"
+              onPress={() => setShowCreateForm(true)}
+            >
+              Get Started
+            </Button>
+          }
+        />
+      )}
+    </ScreenContainer>
   );
 }

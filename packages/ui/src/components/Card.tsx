@@ -1,17 +1,18 @@
-import { styled, Stack, type GetProps } from '@tamagui/core';
-import { forwardRef } from 'react';
+import { styled, View, type GetProps } from '@tamagui/core';
+import React, { forwardRef, useCallback } from 'react';
 import type { TamaguiElement } from '@tamagui/core';
 
 // ---------------------------------------------------------------------------
 // Card frame
 // ---------------------------------------------------------------------------
 
-const CardFrame = styled(Stack, {
+const CardFrame = styled(View, {
   name: 'Card',
 
-  // Layout
+  // Layout — no overflow:'hidden' so text selection, focus rings, and shadows
+  // aren't clipped. Edge children must set their own borderRadius to stay
+  // within the card's rounded corners.
   flexDirection: 'column',
-  overflow: 'hidden',
 
   // Appearance
   backgroundColor: '$surface1',
@@ -31,15 +32,16 @@ const CardFrame = styled(Stack, {
         backgroundColor: '$surface1',
         borderColor: '$borderColor',
         shadowColor: '$shadowColor',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.08,
-        shadowRadius: 8,
-        elevation: 4, // Android
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.06,
+        shadowRadius: 3,
+        elevation: 2, // Android
 
         hoverStyle: {
-          shadowOpacity: 0.14,
-          shadowRadius: 16,
-          elevation: 8,
+          shadowOpacity: 0.12,
+          shadowOffset: { width: 0, height: 4 },
+          shadowRadius: 12,
+          elevation: 6,
           borderColor: '$borderColorHover',
         },
       },
@@ -79,8 +81,8 @@ const CardFrame = styled(Stack, {
       true: {
         cursor: 'pointer',
         pressStyle: {
-          opacity: 0.92,
-          scale: 0.99,
+          opacity: 0.95,
+          scale: 0.985,
         },
       },
       false: {
@@ -97,19 +99,50 @@ const CardFrame = styled(Stack, {
 });
 
 // ---------------------------------------------------------------------------
-// Public Card component – automatically sets accessibilityRole="button" when
-// the pressable variant is true, so consumers don't need to remember.
+// Public Card component – automatically sets role="button" when the pressable
+// variant is true, so consumers don't need to remember.
 // ---------------------------------------------------------------------------
 
-type CardFrameProps = GetProps<typeof CardFrame>;
+type CardFrameProps = GetProps<typeof CardFrame> & {
+  /** RN accessibility prop — mapped to aria-label on web. */
+  accessibilityLabel?: string;
+  /** RN accessibility prop — mapped to aria-roledescription on web. */
+  accessibilityHint?: string;
+  /** RN accessibility prop — ignored (role is set via pressable). */
+  accessibilityRole?: string;
+};
 
 export const Card = forwardRef<TamaguiElement, CardFrameProps>(
-  function Card({ pressable, ...rest }, ref) {
+  function Card(
+    {
+      pressable,
+      accessibilityLabel,
+      accessibilityHint,
+      accessibilityRole: _accessibilityRole,
+      onPress,
+      ...rest
+    },
+    ref,
+  ) {
+    const handleKeyDown = useCallback(
+      (e: { key: string; preventDefault: () => void }) => {
+        if (pressable && onPress && (e.key === 'Enter' || e.key === ' ')) {
+          e.preventDefault();
+          (onPress as () => void)();
+        }
+      },
+      [pressable, onPress],
+    );
+
     return (
       <CardFrame
         ref={ref}
         pressable={pressable}
-        {...(pressable ? { accessibilityRole: 'button' } : {})}
+        {...(pressable ? { role: 'button', tabIndex: 0 } : {})}
+        aria-label={accessibilityLabel}
+        aria-roledescription={accessibilityHint}
+        onPress={pressable ? onPress : undefined}
+        onKeyDown={pressable ? handleKeyDown : undefined}
         {...rest}
       />
     );
@@ -120,7 +153,7 @@ export const Card = forwardRef<TamaguiElement, CardFrameProps>(
 // Card sub-components for structured layouts
 // ---------------------------------------------------------------------------
 
-export const CardHeader = styled(Stack, {
+export const CardHeader = styled(View, {
   name: 'CardHeader',
 
   paddingHorizontal: '$4',
@@ -131,14 +164,14 @@ export const CardHeader = styled(Stack, {
   borderStyle: 'solid',
 });
 
-export const CardBody = styled(Stack, {
+export const CardBody = styled(View, {
   name: 'CardBody',
 
   flex: 1,
   padding: '$4',
 });
 
-export const CardFooter = styled(Stack, {
+export const CardFooter = styled(View, {
   name: 'CardFooter',
 
   paddingHorizontal: '$4',
@@ -157,7 +190,7 @@ export const CardFooter = styled(Stack, {
 // Public types
 // ---------------------------------------------------------------------------
 
-export type CardProps = GetProps<typeof CardFrame>;
+export type CardProps = React.ComponentProps<typeof Card>;
 export type CardHeaderProps = GetProps<typeof CardHeader>;
 export type CardBodyProps = GetProps<typeof CardBody>;
 export type CardFooterProps = GetProps<typeof CardFooter>;

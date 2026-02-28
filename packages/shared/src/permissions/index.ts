@@ -1,15 +1,25 @@
-import type { Visibility, CircleRole, HistoryPolicy, MembershipStatus } from '../types/index.js';
+import type { Visibility, CircleRole, HistoryPolicy, MembershipStatus, PartnerLinkStatus } from '../types/index';
 
-interface EntryAccess {
+export interface EntryAccess {
   authorId: string;
   visibility: Visibility;
   circleId: string | null;
   createdAt: Date;
+  deletedAt: Date | null;
 }
 
-interface ViewerContext {
+export interface ViewerContext {
   userId: string;
-  partnerId: string | null; // active partner's userId, or null
+  /**
+   * The partner's userId. Must only be set when an ACTIVE partner link exists
+   * between the viewer and this user. Null if no active partnership.
+   */
+  partnerId: string | null;
+  /**
+   * Status of the partner link. Must only be 'ACTIVE' when both parties have
+   * accepted the partnership. Null if no partner link exists.
+   */
+  partnerStatus: PartnerLinkStatus | null;
   circleMemberships: Array<{
     circleId: string;
     role: CircleRole;
@@ -17,6 +27,16 @@ interface ViewerContext {
     historyPolicy: HistoryPolicy;
     joinedAt: Date;
   }>;
+}
+
+/** Find the active membership for a circle, or null. */
+function findActiveMembership(
+  circleMemberships: ViewerContext['circleMemberships'],
+  circleId: string,
+) {
+  return circleMemberships.find(
+    (m) => m.circleId === circleId && m.status === 'ACTIVE',
+  ) ?? null;
 }
 
 /**
@@ -27,18 +47,19 @@ export function canViewEntry(entry: EntryAccess, viewer: ViewerContext): boolean
   // Author can always view their own entries
   if (entry.authorId === viewer.userId) return true;
 
+  // Non-authors cannot view soft-deleted entries
+  if (entry.deletedAt) return false;
+
   switch (entry.visibility) {
     case 'PRIVATE':
       return false;
 
     case 'PARTNER':
-      return viewer.partnerId === entry.authorId;
+      return viewer.partnerId === entry.authorId && viewer.partnerStatus === 'ACTIVE';
 
     case 'CIRCLE': {
       if (!entry.circleId) return false;
-      const membership = viewer.circleMemberships.find(
-        (m) => m.circleId === entry.circleId && m.status === 'ACTIVE',
-      );
+      const membership = findActiveMembership(viewer.circleMemberships, entry.circleId);
       if (!membership) return false;
       // CIRCLE visibility respects history policy
       if (membership.historyPolicy === 'ALL') return true;
@@ -47,9 +68,7 @@ export function canViewEntry(entry: EntryAccess, viewer: ViewerContext): boolean
 
     case 'FUTURE_CIRCLE_ONLY': {
       if (!entry.circleId) return false;
-      const membership = viewer.circleMemberships.find(
-        (m) => m.circleId === entry.circleId && m.status === 'ACTIVE',
-      );
+      const membership = findActiveMembership(viewer.circleMemberships, entry.circleId);
       if (!membership) return false;
       // FUTURE_CIRCLE_ONLY: always enforce temporal restriction regardless of history policy.
       // Only entries created after the viewer joined are visible.
@@ -66,6 +85,7 @@ export function canViewEntry(entry: EntryAccess, viewer: ViewerContext): boolean
  * is allowed to modify their own entries.
  */
 export function canEditEntry(entry: EntryAccess, viewer: ViewerContext): boolean {
+  if (entry.deletedAt) return false;
   // Only the author can edit their own entries
   return entry.authorId === viewer.userId;
 }
@@ -76,17 +96,14 @@ export function canEditEntry(entry: EntryAccess, viewer: ViewerContext): boolean
  * can delete entries posted to their circle.
  */
 export function canDeleteEntry(entry: EntryAccess, viewer: ViewerContext): boolean {
+  if (entry.deletedAt) return false;
   // Author can always delete their own entries
   if (entry.authorId === viewer.userId) return true;
 
   // Circle admins/owners can delete entries posted to their circle
   if (entry.circleId && (entry.visibility === 'CIRCLE' || entry.visibility === 'FUTURE_CIRCLE_ONLY')) {
-    const membership = viewer.circleMemberships.find((m) => m.circleId === entry.circleId);
-    if (
-      membership &&
-      membership.status === 'ACTIVE' &&
-      (membership.role === 'OWNER' || membership.role === 'ADMIN')
-    ) {
+    const membership = findActiveMembership(viewer.circleMemberships, entry.circleId);
+    if (membership && (membership.role === 'OWNER' || membership.role === 'ADMIN')) {
       return true;
     }
   }

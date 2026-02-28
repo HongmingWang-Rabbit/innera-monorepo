@@ -46,8 +46,9 @@
 
 ### Directory rules
 
-- Web route files `apps/web/app/**/page.tsx` MUST only re-export screens from `@innera/app`.
+- Web route files `apps/web/app/**/page.tsx` re-export screens from `@innera/app`. Protected routes wrap screens with `RequireAuth` from `@innera/app`.
 - Shared screens live in `/packages/app/src/screens`.
+- Shared components (e.g. `ScreenContainer`, `RequireAuth`, `ErrorBoundary`) live in `/packages/app/src/components`.
 - UI primitives live in `/packages/ui/src/components` — all built on Tamagui.
 - Platform-specific implementations use file suffix: `auth.native.ts`, `auth.web.ts`.
 
@@ -65,10 +66,14 @@
 ```
 
 - `tamagui.config.ts` defines spacing, color, radius, and font tokens.
-- Themes: `light` and `dark` with semantic color mappings.
+- Themes: `light` (warm backgrounds: `warmWhite`, `warmGray50`, `warmGray100`) and `dark` with semantic color mappings.
+- Semantic tokens include `primary`, `secondary`, `danger`, `success`, `warning`, `error`, `info`, `headerWarm`, `colorSubtle`.
+- `colorSubtle` targets WCAG AA+ contrast (~7.5:1 in light, adequate in dark).
 - All components use `styled()` from Tamagui — zero raw `StyleSheet.create`.
+- Components: `Button`, `Card`, `Input`, `Text` (+ `Heading`, `Caption`, `Label`), `Badge`, `IconBadge`, `StatCard`, `EmptyState`.
 - Web: Tamagui compiler extracts static CSS at build time via `@tamagui/next-plugin`.
 - Mobile: Tamagui runs natively on RN.
+- **SSR hydration:** The `Provider` in `packages/app/src/provider/index.tsx` defers `useColorScheme()` until after mount via a `mounted` flag to prevent server/client theme mismatch (server has no `window.matchMedia`). Trade-off: brief light→dark flash for dark-mode users.
 
 ---
 

@@ -8,6 +8,7 @@ export default fp(
       global: true,
       max: 300,
       timeWindow: '1 minute',
+      redis: app.redis,
       keyGenerator: (request: FastifyRequest) => {
         return request.ip;
       },
@@ -24,8 +25,8 @@ export default fp(
       errorResponseBuilder: (_request, context) => ({
         statusCode: 429,
         code: 'RATE_LIMITED',
-        message: `Rate limit exceeded. Try again in ${Math.ceil(context.ttl / 1000)} seconds.`,
-        retryAfter: Math.ceil(context.ttl / 1000),
+        message: `Rate limit exceeded. Try again in ${Math.max(1, Math.ceil(context.ttl / 1000))} seconds.`,
+        retryAfter: Math.max(1, Math.ceil(context.ttl / 1000)),
       }),
     });
   },

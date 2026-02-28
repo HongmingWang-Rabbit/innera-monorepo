@@ -1,5 +1,9 @@
 'use client';
-import { PartnerScreen } from '@innera/app';
+import { PartnerScreen, RequireAuth } from '@innera/app';
 export default function PartnerPage() {
-  return <PartnerScreen />;
+  return (
+    <RequireAuth>
+      <PartnerScreen />
+    </RequireAuth>
+  );
 }

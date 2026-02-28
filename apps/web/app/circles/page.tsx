@@ -1,5 +1,9 @@
 'use client';
-import { CirclesScreen } from '@innera/app';
+import { CirclesScreen, RequireAuth } from '@innera/app';
 export default function CirclesPage() {
-  return <CirclesScreen />;
+  return (
+    <RequireAuth>
+      <CirclesScreen />
+    </RequireAuth>
+  );
 }

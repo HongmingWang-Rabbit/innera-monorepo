@@ -4,7 +4,7 @@ import { createFont, createTamagui, createTokens } from '@tamagui/core';
 // Tokens
 // ---------------------------------------------------------------------------
 
-const sizeTokens = {
+const sizeSpaceTokens = {
   1: 4,
   2: 8,
   3: 12,
@@ -27,28 +27,9 @@ const sizeTokens = {
   20: 80,
 } as const;
 
-const spaceTokens = {
-  1: 4,
-  2: 8,
-  3: 12,
-  4: 16,
-  5: 20,
-  6: 24,
-  7: 28,
-  8: 32,
-  9: 36,
-  10: 40,
-  11: 44,
-  12: 48,
-  13: 52,
-  14: 56,
-  15: 60,
-  16: 64,
-  17: 68,
-  18: 72,
-  19: 76,
-  20: 80,
-} as const;
+// Size and space share the same scale
+const sizeTokens = sizeSpaceTokens;
+const spaceTokens = sizeSpaceTokens;
 
 const radiusTokens = {
   1: 2,
@@ -179,6 +160,13 @@ const palette = {
   pink700: '#be185d',
   pink800: '#9d174d',
   pink900: '#831843',
+
+  // Warm neutrals
+  warmWhite: '#FDFBF7',
+  warmGray50: '#FAF8F5',
+  warmGray100: '#F5F2ED',
+  warmHeader: '#FFF8F0',
+  warmBorder: '#EDE8E0',
 
   // Transparent
   transparent: 'rgba(0,0,0,0)',
@@ -333,10 +321,10 @@ const bodyFont = createFont({
 // ---------------------------------------------------------------------------
 
 const lightTheme = {
-  background: palette.white,
-  backgroundHover: palette.gray50,
-  backgroundPress: palette.gray100,
-  backgroundFocus: palette.gray50,
+  background: palette.warmWhite,
+  backgroundHover: palette.warmGray50,
+  backgroundPress: palette.warmGray100,
+  backgroundFocus: palette.warmGray50,
   backgroundStrong: palette.gray100,
   backgroundTransparent: palette.transparent,
 
@@ -380,13 +368,19 @@ const lightTheme = {
   error: palette.red500,
 
   // Surface levels
-  surface1: palette.white,
-  surface2: palette.gray50,
-  surface3: palette.gray100,
+  surface1: palette.warmWhite,
+  surface2: palette.warmGray50,
+  surface3: palette.warmGray100,
   surface4: palette.gray200,
 
   // Muted text
-  colorSubtle: palette.gray500,
+  colorSubtle: palette.gray600,
+
+  // Semantic — info
+  info: palette.blue500,
+
+  // Warm header
+  headerWarm: palette.warmHeader,
 
   // Blue shade tokens
   blue1: palette.blue50,
@@ -409,6 +403,11 @@ const lightTheme = {
 
   // Pink shade tokens
   pink3: palette.pink100,
+  pink10: palette.pink800,
+
+  // Red shade tokens
+  red3: palette.red100,
+  red10: palette.red700,
 };
 
 const darkTheme = {
@@ -467,6 +466,12 @@ const darkTheme = {
   // Muted text
   colorSubtle: palette.gray400,
 
+  // Semantic — info
+  info: palette.blue400,
+
+  // Warm header
+  headerWarm: palette.gray900,
+
   // Blue shade tokens
   blue1: palette.blue900,
   blue3: palette.blue800,
@@ -488,6 +493,11 @@ const darkTheme = {
 
   // Pink shade tokens
   pink3: palette.pink800,
+  pink10: palette.pink300,
+
+  // Red shade tokens
+  red3: palette.red700,
+  red10: palette.red200,
 };
 
 // ---------------------------------------------------------------------------
@@ -591,11 +601,46 @@ const shorthands = {
 // Config
 // ---------------------------------------------------------------------------
 
+const monoFont = createFont({
+  family:
+    '"SF Mono", "Fira Code", "Fira Mono", "Roboto Mono", Menlo, Courier, monospace',
+  size: {
+    1: 11,
+    2: 12,
+    3: 13,
+    4: 14,
+    5: 15,
+    6: 16,
+    7: 18,
+    8: 20,
+  },
+  lineHeight: {
+    1: 16,
+    2: 18,
+    3: 20,
+    4: 22,
+    5: 24,
+    6: 26,
+    7: 28,
+    8: 32,
+  },
+  weight: {
+    1: '400',
+    2: '500',
+    3: '700',
+  },
+  letterSpacing: {
+    1: 0,
+    2: 0.5,
+  },
+});
+
 export const config = createTamagui({
   tokens,
   fonts: {
     heading: headingFont,
     body: bodyFont,
+    mono: monoFont,
   },
   themes: {
     light: lightTheme,
@@ -603,9 +648,11 @@ export const config = createTamagui({
   },
   media,
   shorthands,
-  defaultTheme: 'light',
-  shouldAddPrefersColorThemes: true,
-  themeClassNameOnRoot: true,
+  settings: {
+    defaultTheme: 'light',
+    shouldAddPrefersColorThemes: true,
+    themeClassNameOnRoot: true,
+  },
 });
 
 // Type declaration so Tamagui internals pick up the correct types.

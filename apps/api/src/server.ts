@@ -1,4 +1,4 @@
-import { randomBytes, randomUUID } from 'node:crypto';
+import { randomUUID, randomBytes } from 'node:crypto';
 import Fastify, { type FastifyError } from 'fastify';
 import cookie from '@fastify/cookie';
 import websocket from '@fastify/websocket';
@@ -27,6 +27,7 @@ function validateEnv(): void {
     DATABASE_URL: process.env['DATABASE_URL'],
     REDIS_URL: process.env['REDIS_URL'],
     CORS_ORIGINS: process.env['CORS_ORIGINS'],
+    COOKIE_SECRET: process.env['COOKIE_SECRET'],
   };
 
   const missing = Object.entries(recommended)
@@ -40,12 +41,29 @@ function validateEnv(): void {
     );
   }
 
-  // Warn in non-production instead of crashing
+  // Warn in non-production instead of crashing.
+  // Uses console.warn because this runs before Fastify/Pino logger is initialized.
   if (missing.length > 0) {
     console.warn(
       `[WARN] Missing environment variables (non-production): ${missing.join(', ')}. ` +
       'Defaults will be used where possible.',
     );
+  }
+
+  // JWT_SECRET placeholder & length guard
+  const KNOWN_PLACEHOLDERS = ['change-me-to-a-random-64-char-string'];
+  const jwtSecret = process.env.JWT_SECRET ?? '';
+  if (KNOWN_PLACEHOLDERS.includes(jwtSecret)) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('JWT_SECRET must be changed from its placeholder value in production');
+    }
+    console.warn('[WARN] JWT_SECRET is set to a placeholder value. Change it before deploying.');
+  }
+  if (jwtSecret.length < 32) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('JWT_SECRET must be at least 32 characters for HS256');
+    }
+    console.warn('[WARN] JWT_SECRET is shorter than 32 characters. Use a longer secret in production.');
   }
 }
 
@@ -56,6 +74,7 @@ validateEnv();
 const REDACTED = '[Redacted]';
 
 const app = Fastify({
+  bodyLimit: 1 * 1024 * 1024, // 1 MB global default; attachment routes override with their own limit
   logger: {
     level: process.env['LOG_LEVEL'] ?? 'info',
     redact: {
@@ -86,7 +105,15 @@ const app = Fastify({
     },
   },
   genReqId: () => randomUUID(),
-  trustProxy: parseInt(process.env['TRUST_PROXY_HOPS'] ?? '1', 10),
+  // TRUST_PROXY_HOPS: number of reverse-proxy hops to trust for X-Forwarded-* headers.
+  // Set to the number of proxies in front of this service (e.g., 1 for a single load balancer).
+  trustProxy: (() => {
+    const trustProxyHops = parseInt(process.env['TRUST_PROXY_HOPS'] ?? '0', 10);
+    if (isNaN(trustProxyHops) || trustProxyHops < 0) {
+      throw new Error('TRUST_PROXY_HOPS must be a non-negative integer');
+    }
+    return trustProxyHops;
+  })(),
   ajv: {
     customOptions: {
       strict: 'log',
@@ -100,7 +127,6 @@ const app = Fastify({
 
 await app.register(corsPlugin);
 await app.register(cookie, {
-  // Cookie signing secret — use env var or generate a random one for dev
   secret: process.env['COOKIE_SECRET'] || randomBytes(32).toString('hex'),
 });
 await app.register(redisPlugin);
@@ -115,8 +141,17 @@ await app.register(healthRoutes);
 // All versioned API routes under /v1
 await app.register(v1Routes, { prefix: '/v1' });
 
+// Prevent caching of API responses containing sensitive data
+app.addHook('onSend', async (_request, reply) => {
+  if (!reply.hasHeader('cache-control')) {
+    reply.header('cache-control', 'no-store, no-cache, must-revalidate');
+    reply.header('pragma', 'no-cache');
+  }
+});
+
 // ---- Error handler ----
 
+// Note: handler also processes ZodError and AppError (not just FastifyError)
 app.setErrorHandler<FastifyError>((error, request, reply) => {
   // Zod validation errors
   if (error instanceof ZodError) {
@@ -125,7 +160,7 @@ app.setErrorHandler<FastifyError>((error, request, reply) => {
       statusCode: 400,
       code: 'VALIDATION_ERROR',
       message: 'Invalid request',
-      errors: error.errors.map((e) => ({
+      errors: error.issues.map((e) => ({
         path: e.path.join('.'),
         message: e.message,
       })),
@@ -166,12 +201,24 @@ app.setErrorHandler<FastifyError>((error, request, reply) => {
     });
   }
 
+  // Other Fastify errors with explicit status codes (e.g., 413, 415)
+  if (error.statusCode && error.statusCode >= 400 && error.statusCode < 500) {
+    request.log.info({ err: error }, 'Fastify client error');
+    return reply.status(error.statusCode).send({
+      statusCode: error.statusCode,
+      code: error.code ?? 'BAD_REQUEST',
+      message: error.message,
+    });
+  }
+
   // Unexpected errors — log with full stack but don't expose internals
   request.log.error({ err: error }, 'Unhandled error');
+  // requestId is intentionally included so callers can reference it in support requests
   return reply.status(500).send({
     statusCode: 500,
     code: 'INTERNAL_ERROR',
     message: 'Something went wrong',
+    requestId: request.id,
   });
 });
 
@@ -187,14 +234,14 @@ app.setNotFoundHandler((request, reply) => {
 
 // ---- Graceful shutdown ----
 
-const SHUTDOWN_TIMEOUT_MS = 30_000;
+const SHUTDOWN_TIMEOUT_MS = Math.max(5000, parseInt(process.env['SHUTDOWN_TIMEOUT_MS'] ?? '30000', 10) || 30000);
 
 async function gracefulShutdown(signal: string): Promise<void> {
   app.log.info({ signal }, 'Received shutdown signal, starting graceful shutdown');
 
   // Hard-kill timeout in case something hangs
   const hardKillTimer = setTimeout(() => {
-    app.log.error('Graceful shutdown timed out after 30s — forcing exit');
+    app.log.error(`Graceful shutdown timed out after ${SHUTDOWN_TIMEOUT_MS}ms — forcing exit`);
     process.exit(1);
   }, SHUTDOWN_TIMEOUT_MS);
   hardKillTimer.unref();
@@ -222,7 +269,7 @@ process.on('SIGINT', () => { void gracefulShutdown('SIGINT'); });
 
 // ---- Start server ----
 
-const PORT = Number(process.env['PORT'] ?? 4000);
+const PORT = Number(process.env['PORT'] ?? 3001);
 const HOST = process.env['HOST'] ?? '0.0.0.0';
 
 try {

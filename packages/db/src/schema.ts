@@ -6,7 +6,6 @@ import {
   boolean,
   integer,
   smallint,
-  bigint,
   timestamp,
   jsonb,
   inet,
@@ -44,7 +43,7 @@ export const partnerLinkStatusEnum = pgEnum('partner_link_status', [
 
 export const circleStatusEnum = pgEnum('circle_status', ['ACTIVE', 'ARCHIVED']);
 
-export const circleRoleEnum = pgEnum('circle_role', ['ADMIN', 'MEMBER']);
+export const circleRoleEnum = pgEnum('circle_role', ['OWNER', 'ADMIN', 'MEMBER']);
 
 export const membershipStatusEnum = pgEnum('membership_status', [
   'ACTIVE',
@@ -116,6 +115,7 @@ export const users = pgTable(
     encryptionVersion: smallint('encryption_version').default(1).notNull(),
     deletedAt: timestamp('deleted_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    // Uses app-server clock. For distributed deployments, consider DB-level triggers.
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull().$onUpdate(() => new Date()),
   },
   (t) => [uniqueIndex('users_email_unique').on(t.email).where(sql`deleted_at IS NULL`)],
@@ -149,6 +149,7 @@ export const userSettings = pgTable('user_settings', {
   defaultVisibility: visibilityEnum('default_visibility').default('PRIVATE').notNull(),
   locale: varchar('locale', { length: 10 }).default('en').notNull(),
   timezone: varchar('timezone', { length: 50 }),
+  // Uses app-server clock. For distributed deployments, consider DB-level triggers.
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull().$onUpdate(() => new Date()),
 });
 
@@ -156,10 +157,13 @@ export const circles = pgTable('circles', {
   id: uuid('id').primaryKey().defaultRandom(),
   name: varchar('name', { length: 100 }).notNull(),
   description: text('description'),
+  // Intentionally nullable: set to NULL when the creator's account is deleted (onDelete: 'set null').
   createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
   status: circleStatusEnum('status').default('ACTIVE').notNull(),
   maxMembers: integer('max_members').default(20).notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  // Uses app-server clock. For distributed deployments, consider DB-level triggers.
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull().$onUpdate(() => new Date()),
 });
 
 export const entries = pgTable(
@@ -169,6 +173,9 @@ export const entries = pgTable(
     authorId: uuid('author_id')
       .references(() => users.id, { onDelete: 'cascade' })
       .notNull(),
+    // Plaintext title is used for server-side search (mood + title).
+    // TODO: Remove once client-side searchable encryption is implemented.
+    // See docs/architecture/03-encryption.md for migration plan.
     title: varchar('title', { length: 200 }),
     titleEncrypted: bytea('title_encrypted'),
     contentEncrypted: bytea('content_encrypted').notNull(),
@@ -177,15 +184,17 @@ export const entries = pgTable(
     circleId: uuid('circle_id').references(() => circles.id, { onDelete: 'restrict' }),
     mood: varchar('mood', { length: 20 }),
     version: integer('version').default(1).notNull(),
-    conflictOf: uuid('conflict_of'),
+    conflictOf: uuid('conflict_of'), // FK to entries.id — self-reference added via migration to avoid TS circular inference
     deletedAt: timestamp('deleted_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    // Uses app-server clock. For distributed deployments, consider DB-level triggers.
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull().$onUpdate(() => new Date()),
   },
   (t) => [
     index('entries_author_deleted_created').on(t.authorId, t.deletedAt, t.createdAt),
     index('entries_circle_id').on(t.circleId),
     index('entries_author_updated').on(t.authorId, t.updatedAt),
+    index('entries_author_created_active').on(t.authorId, t.createdAt).where(sql`deleted_at IS NULL`),
   ],
 );
 
@@ -279,6 +288,8 @@ export const circleMemberships = pgTable(
     uniqueIndex('circle_memberships_active_unique')
       .on(t.circleId, t.userId)
       .where(sql`status = 'ACTIVE'`),
+    // Non-partial index covers queries for ALL statuses (e.g., history, re-join checks).
+    // The partial unique index above only covers ACTIVE rows.
     index('circle_memberships_circle_user').on(t.circleId, t.userId),
   ],
 );
@@ -355,7 +366,10 @@ export const comments = pgTable(
     deletedAt: timestamp('deleted_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   },
-  (t) => [index('comments_entry_id').on(t.entryId)],
+  (t) => [
+    index('comments_entry_id').on(t.entryId),
+    index('comments_entry_active').on(t.entryId, t.createdAt).where(sql`deleted_at IS NULL`),
+  ],
 );
 
 export const reactions = pgTable(
@@ -373,7 +387,6 @@ export const reactions = pgTable(
   },
   (t) => [
     uniqueIndex('reactions_entry_user_emoji').on(t.entryId, t.userId, t.emoji),
-    index('reactions_entry_id').on(t.entryId),
   ],
 );
 
@@ -405,6 +418,7 @@ export const pushTokens = pgTable(
     token: text('token').notNull(),
     platform: platformEnum('platform').notNull(),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    // Uses app-server clock. For distributed deployments, consider DB-level triggers.
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull().$onUpdate(() => new Date()),
   },
   (t) => [uniqueIndex('push_tokens_user_token').on(t.userId, t.token)],
@@ -443,11 +457,14 @@ export const attachments = pgTable(
     storageKey: text('storage_key').notNull(),
     fileName: varchar('file_name', { length: 255 }),
     mimeType: varchar('mime_type', { length: 100 }),
-    sizeBytes: bigint('size_bytes', { mode: 'number' }),
+    sizeBytes: integer('size_bytes').notNull(),
     encryptionVersion: smallint('encryption_version').default(1).notNull(),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   },
-  (t) => [index('attachments_entry_id').on(t.entryId)],
+  (t) => [
+    index('attachments_entry_id').on(t.entryId),
+    uniqueIndex('attachments_storage_key').on(t.storageKey),
+  ],
 );
 
 export const accountDeletionRequests = pgTable(

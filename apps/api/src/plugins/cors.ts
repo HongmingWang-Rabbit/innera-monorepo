@@ -1,6 +1,7 @@
 import cors from '@fastify/cors';
 import fp from 'fastify-plugin';
 import type { FastifyInstance } from 'fastify';
+import { AppError } from '@innera/shared';
 
 function getAllowedOrigins(): string[] {
   const envOrigins = process.env['CORS_ORIGINS'];
@@ -38,7 +39,7 @@ export default fp(
         if (allowedOrigins.includes(origin)) {
           cb(null, true);
         } else {
-          cb(new Error('Origin not allowed by CORS'), false);
+          cb(new AppError('CORS_REJECTED', 403, 'Origin not allowed by CORS'), false);
         }
       },
       credentials: true,

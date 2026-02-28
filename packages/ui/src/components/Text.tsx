@@ -15,7 +15,7 @@ export const Text = styled(TamaguiText, {
 
   fontFamily: '$body',
   fontSize: '$4',
-  lineHeight: '$4',
+  lineHeight: '$5',
   color: '$color',
 
   variants: {
@@ -55,14 +55,14 @@ export const Text = styled(TamaguiText, {
         fontSize: '$2',
         lineHeight: '$4',
         fontWeight: '400',
-        color: '$colorHover',
+        color: '$colorSubtle',
       },
 
       /** Short form labels for inputs, badges, etc. */
       label: {
         fontFamily: '$body',
         fontSize: '$3',
-        lineHeight: '$3',
+        lineHeight: '$4',
         fontWeight: '500',
         color: '$color',
       },
@@ -91,7 +91,7 @@ export const Text = styled(TamaguiText, {
      * Colour shortcuts for common semantic meanings.
      */
     tone: {
-      muted: { color: '$colorHover' },
+      muted: { color: '$colorSubtle' },
       danger: { color: '$error' },
       success: { color: '$success' },
       warning: { color: '$warning' },
@@ -114,6 +114,8 @@ export type TextProps = GetProps<typeof Text>;
 
 /**
  * Large display heading — equivalent to `<Text variant="heading" />`.
+ * Set `tag` explicitly (e.g. `tag="h1"`, `tag="h2"`) to match the heading level
+ * in the page hierarchy. No default tag is set to avoid heading-level violations.
  */
 export const Heading = styled(Text, {
   name: 'Heading',

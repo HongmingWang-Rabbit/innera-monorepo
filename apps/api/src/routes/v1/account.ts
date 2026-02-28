@@ -11,9 +11,10 @@ const accountRoutes: FastifyPluginAsync = async (app) => {
   }, async (request, reply) => {
     void request.user;
     // TODO: schedule account deletion
-    return reply.status(200).send({
-      statusCode: 200,
-      data: { message: 'TODO' },
+    return reply.status(501).send({
+      statusCode: 501,
+      code: 'NOT_IMPLEMENTED',
+      message: 'Account deletion deferred to post-MVP',
     });
   });
 
@@ -26,9 +27,10 @@ const accountRoutes: FastifyPluginAsync = async (app) => {
   }, async (request, reply) => {
     void request.user;
     // TODO: cancel scheduled deletion
-    return reply.status(200).send({
-      statusCode: 200,
-      data: { message: 'TODO' },
+    return reply.status(501).send({
+      statusCode: 501,
+      code: 'NOT_IMPLEMENTED',
+      message: 'Account deletion cancellation deferred to post-MVP',
     });
   });
 
@@ -41,9 +43,10 @@ const accountRoutes: FastifyPluginAsync = async (app) => {
   }, async (request, reply) => {
     void request.user;
     // TODO: check deletion status
-    return reply.status(200).send({
-      statusCode: 200,
-      data: { scheduled: false },
+    return reply.status(501).send({
+      statusCode: 501,
+      code: 'NOT_IMPLEMENTED',
+      message: 'Deletion status check deferred to post-MVP',
     });
   });
 };

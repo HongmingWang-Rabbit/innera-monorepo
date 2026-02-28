@@ -1,44 +1,76 @@
 import type { FastifyPluginAsync } from 'fastify';
-import { paginationSchema } from '@innera/shared';
+import { eq, and, lt, desc, sql, inArray } from 'drizzle-orm';
+import { paginationSchema, AppError } from '@innera/shared';
+import { db, notifications } from '@innera/db';
 import { authenticate } from '../../middleware/auth.js';
+import { decodeCursor, buildPaginatedResponse } from '../../services/pagination.js';
+
+function notificationToResponse(n: typeof notifications.$inferSelect) {
+  return {
+    id: n.id,
+    type: n.type,
+    title: n.title,
+    body: n.body,
+    data: n.data,
+    read: n.read,
+    readAt: n.readAt?.toISOString() ?? null,
+    createdAt: n.createdAt.toISOString(),
+  };
+}
 
 const notificationsRoutes: FastifyPluginAsync = async (app) => {
   /**
    * GET /v1/notifications
-   * List notifications for the authenticated user (cursor-paginated).
    */
   app.get('/notifications', {
     preHandler: [authenticate],
   }, async (request, reply) => {
-    void request.user;
-    const query = paginationSchema.parse(request.query);
-    void query;
-    // TODO: fetch notifications
+    const { cursor, limit } = paginationSchema.parse(request.query);
+    const cursorDate = decodeCursor(cursor);
+
+    const conditions = [eq(notifications.userId, request.user!.id)];
+    if (cursorDate) conditions.push(lt(notifications.createdAt, cursorDate));
+
+    const rows = await db
+      .select()
+      .from(notifications)
+      .where(and(...conditions))
+      .orderBy(desc(notifications.createdAt))
+      .limit(limit + 1);
+
+    const result = buildPaginatedResponse(rows, limit, (row) => row.createdAt);
+
     return reply.status(200).send({
       statusCode: 200,
-      data: [],
-      pagination: { nextCursor: null, hasMore: false, limit: query.limit },
+      data: result.data.map(notificationToResponse),
+      pagination: result.pagination,
     });
   });
 
   /**
    * GET /v1/notifications/unread-count
-   * Return the number of unread notifications for the authenticated user.
    */
   app.get('/notifications/unread-count', {
     preHandler: [authenticate],
   }, async (request, reply) => {
-    void request.user;
-    // TODO: count unread notifications
+    const [result] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(notifications)
+      .where(
+        and(
+          eq(notifications.userId, request.user!.id),
+          eq(notifications.read, false),
+        ),
+      );
+
     return reply.status(200).send({
       statusCode: 200,
-      data: { count: 0 },
+      data: { count: result?.count ?? 0 },
     });
   });
 
   /**
    * POST /v1/notifications/:id/read
-   * Mark a single notification as read.
    */
   app.post<{ Params: { id: string } }>('/notifications/:id/read', {
     preHandler: [authenticate],
@@ -52,28 +84,65 @@ const notificationsRoutes: FastifyPluginAsync = async (app) => {
       },
     },
   }, async (request, reply) => {
-    void request.user;
     const { id } = request.params;
-    void id;
-    // TODO: mark notification as read
+
+    const result = await db
+      .update(notifications)
+      .set({ read: true, readAt: new Date() })
+      .where(
+        and(
+          eq(notifications.id, id),
+          eq(notifications.userId, request.user!.id),
+        ),
+      )
+      .returning();
+
+    if (result.length === 0) throw new AppError('NOT_FOUND', 404, 'Notification not found');
+
     return reply.status(200).send({
       statusCode: 200,
-      data: { message: 'TODO' },
+      data: notificationToResponse(result[0]!),
     });
   });
 
   /**
    * POST /v1/notifications/read-all
-   * Mark all notifications as read for the authenticated user.
    */
   app.post('/notifications/read-all', {
     preHandler: [authenticate],
   }, async (request, reply) => {
-    void request.user;
-    // TODO: mark all notifications as read
+    // Process in batches to avoid locking too many rows at once
+    const BATCH_SIZE = 500;
+    let totalUpdated = 0;
+    let batchCount: number;
+
+    do {
+      // Select a batch of unread notification IDs
+      const batch = await db
+        .select({ id: notifications.id })
+        .from(notifications)
+        .where(
+          and(
+            eq(notifications.userId, request.user!.id),
+            eq(notifications.read, false),
+          ),
+        )
+        .limit(BATCH_SIZE);
+
+      batchCount = batch.length;
+      if (batchCount === 0) break;
+
+      await db
+        .update(notifications)
+        .set({ read: true, readAt: new Date() })
+        .where(inArray(notifications.id, batch.map((b) => b.id)));
+
+      totalUpdated += batchCount;
+    } while (batchCount === BATCH_SIZE);
+
     return reply.status(200).send({
       statusCode: 200,
-      data: { message: 'TODO' },
+      data: { success: true, updated: totalUpdated },
     });
   });
 };

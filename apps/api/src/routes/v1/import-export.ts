@@ -9,12 +9,14 @@ const importExportRoutes: FastifyPluginAsync = async (app) => {
    */
   app.post('/export', {
     preHandler: [authenticate],
+    config: { rateLimit: { max: 5, timeWindow: '1 hour' } },
   }, async (request, reply) => {
     void request.user;
     // TODO: start export job
-    return reply.status(201).send({
-      statusCode: 201,
-      data: { message: 'TODO' },
+    return reply.status(501).send({
+      statusCode: 501,
+      code: 'NOT_IMPLEMENTED',
+      message: 'Export/import deferred to post-MVP',
     });
   });
 
@@ -38,9 +40,10 @@ const importExportRoutes: FastifyPluginAsync = async (app) => {
     const { jobId } = request.params;
     void jobId;
     // TODO: check export job status
-    return reply.status(200).send({
-      statusCode: 200,
-      data: { message: 'TODO' },
+    return reply.status(501).send({
+      statusCode: 501,
+      code: 'NOT_IMPLEMENTED',
+      message: 'Export/import deferred to post-MVP',
     });
   });
 
@@ -51,12 +54,14 @@ const importExportRoutes: FastifyPluginAsync = async (app) => {
    */
   app.post('/import', {
     preHandler: [authenticate],
+    config: { rateLimit: { max: 5, timeWindow: '1 hour' } },
   }, async (request, reply) => {
     void request.user;
     // TODO: start import job
-    return reply.status(201).send({
-      statusCode: 201,
-      data: { message: 'TODO' },
+    return reply.status(501).send({
+      statusCode: 501,
+      code: 'NOT_IMPLEMENTED',
+      message: 'Export/import deferred to post-MVP',
     });
   });
 
@@ -80,9 +85,10 @@ const importExportRoutes: FastifyPluginAsync = async (app) => {
     const { jobId } = request.params;
     void jobId;
     // TODO: check import job status
-    return reply.status(200).send({
-      statusCode: 200,
-      data: { message: 'TODO' },
+    return reply.status(501).send({
+      statusCode: 501,
+      code: 'NOT_IMPLEMENTED',
+      message: 'Export/import deferred to post-MVP',
     });
   });
 };

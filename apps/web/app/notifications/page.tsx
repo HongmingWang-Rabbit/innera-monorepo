@@ -1,5 +1,9 @@
 'use client';
-import { NotificationsScreen } from '@innera/app';
+import { NotificationsScreen, RequireAuth } from '@innera/app';
 export default function NotificationsPage() {
-  return <NotificationsScreen />;
+  return (
+    <RequireAuth>
+      <NotificationsScreen />
+    </RequireAuth>
+  );
 }

@@ -1,14 +1,14 @@
-import { styled, Stack, Text, type GetProps } from '@tamagui/core';
-import { forwardRef, type ReactNode } from 'react';
+import { styled, View, Text, type GetProps } from '@tamagui/core';
+import { Spinner } from 'tamagui';
+import { forwardRef, useCallback, type KeyboardEvent, type ReactNode } from 'react';
 import type { TamaguiElement } from '@tamagui/core';
 
 // ---------------------------------------------------------------------------
 // Base button frame
 // ---------------------------------------------------------------------------
 
-const ButtonFrame = styled(Stack, {
+const ButtonFrame = styled(View, {
   name: 'Button',
-  tag: 'button',
 
   // Layout
   flexDirection: 'row',
@@ -27,10 +27,6 @@ const ButtonFrame = styled(Stack, {
   // Default (primary) appearance
   backgroundColor: '$primary',
   borderColor: '$primary',
-  pressStyle: {
-    opacity: 0.85,
-    scale: 0.98,
-  },
   hoverStyle: {
     backgroundColor: '$primaryHover',
     borderColor: '$primaryHover',
@@ -109,27 +105,27 @@ const ButtonFrame = styled(Stack, {
         paddingVertical: '$2',
         paddingHorizontal: '$3',
         borderRadius: '$3',
-        height: '$8',
+        minHeight: '$8',
       },
       md: {
         paddingVertical: '$3',
         paddingHorizontal: '$4',
         borderRadius: '$4',
-        height: '$10',
+        minHeight: '$10',
       },
       lg: {
         paddingVertical: '$4',
         paddingHorizontal: '$6',
         borderRadius: '$5',
-        height: '$12',
+        minHeight: '$12',
       },
     },
 
     disabled: {
       true: {
         opacity: 0.5,
-        pointerEvents: 'none',
         cursor: 'not-allowed',
+        pointerEvents: 'none',
       },
     },
 
@@ -180,15 +176,12 @@ const ButtonText = styled(Text, {
     size: {
       sm: {
         fontSize: '$3',
-        lineHeight: '$3',
       },
       md: {
         fontSize: '$4',
-        lineHeight: '$4',
       },
       lg: {
         fontSize: '$5',
-        lineHeight: '$5',
       },
     },
   } as const,
@@ -203,10 +196,28 @@ const ButtonText = styled(Text, {
 // Public Button component
 // ---------------------------------------------------------------------------
 
+type ButtonVariant = NonNullable<ButtonFrameProps['variant']>;
+
+const SPINNER_COLOR: Record<ButtonVariant, string> = {
+  primary: '$primaryColor',
+  secondary: '$secondaryColor',
+  ghost: '$color',
+  danger: '$dangerColor',
+};
+
 type ButtonFrameProps = GetProps<typeof ButtonFrame>;
 
 export type ButtonProps = ButtonFrameProps & {
   children?: ReactNode;
+  loading?: boolean;
+  /** RN accessibility prop — mapped to aria-label on web. */
+  accessibilityLabel?: string;
+  /** RN accessibility prop — mapped to aria-roledescription on web. */
+  accessibilityHint?: string;
+  /** RN accessibility prop — mapped to aria-* attributes on web. */
+  accessibilityState?: Record<string, unknown>;
+  /** RN accessibility prop — ignored (role="button" already set). */
+  accessibilityRole?: string;
 };
 
 export const Button = forwardRef<TamaguiElement, ButtonProps>(function Button(
@@ -216,24 +227,60 @@ export const Button = forwardRef<TamaguiElement, ButtonProps>(function Button(
     size = 'md',
     disabled = false,
     fullWidth = false,
+    loading = false,
+    onPress,
+    // Intercept RN accessibility props so they don't leak to the DOM.
+    accessibilityLabel,
+    accessibilityHint,
+    accessibilityState,
+    accessibilityRole: _accessibilityRole,
     ...rest
   },
   ref,
 ) {
+  const isDisabled = disabled || loading;
+
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent<HTMLElement>) => {
+      if (isDisabled) return;
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        // Keyboard-triggered press: onPress is called without the
+        // GestureResponderEvent argument. Consumers that depend on the event
+        // object should handle `undefined` gracefully.
+        (onPress as (() => void) | undefined)?.();
+      }
+    },
+    [isDisabled, onPress],
+  );
+
   return (
     <ButtonFrame
       ref={ref}
+      role="button"
+      tabIndex={isDisabled ? -1 : 0}
       variant={variant}
       size={size}
-      disabled={disabled}
+      disabled={isDisabled}
       fullWidth={fullWidth}
-      aria-disabled={disabled}
-      accessibilityRole="button"
-      opacity={disabled ? 0.5 : 1}
-      pointerEvents={disabled ? 'none' : 'auto'}
+      aria-disabled={isDisabled}
+      aria-busy={loading || undefined}
+      aria-label={accessibilityLabel}
+      aria-roledescription={accessibilityHint}
+      aria-selected={
+        accessibilityState?.selected != null
+          ? Boolean(accessibilityState.selected)
+          : undefined
+      }
+      onPress={isDisabled ? undefined : onPress}
+      // Spread as object to bypass Tamagui View's prop types which don't include onKeyDown.
+      // The handler still works via DOM passthrough on web; on native it's a no-op.
+      {...{ onKeyDown: handleKeyDown }}
       {...rest}
     >
-      {typeof children === 'string' ? (
+      {loading ? (
+        <Spinner size="small" color={SPINNER_COLOR[variant]} />
+      ) : typeof children === 'string' ? (
         <ButtonText variant={variant} size={size}>
           {children}
         </ButtonText>

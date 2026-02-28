@@ -23,3 +23,7 @@ coverage/
 # build
 out/
 build/
+
+# Tamagui generated files
+.tamagui/
+styles/tamagui.css

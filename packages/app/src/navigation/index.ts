@@ -4,6 +4,7 @@ export const Routes = {
   Home: '/',
   Entry: '/entry/[id]',
   NewEntry: '/entry/new',
+  EditEntry: '/entry/edit/[id]',
   Partner: '/partner',
   Circles: '/circles',
   CircleDetail: '/circles/[id]',
@@ -19,6 +20,7 @@ export type ScreenParams = {
   Home: Record<string, never>;
   Entry: { id: string };
   NewEntry: Record<string, never>;
+  EditEntry: { id: string };
   Partner: Record<string, never>;
   Circles: Record<string, never>;
   CircleDetail: { id: string };

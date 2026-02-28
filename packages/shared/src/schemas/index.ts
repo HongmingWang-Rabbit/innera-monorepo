@@ -3,45 +3,42 @@ import {
   Visibility,
   HistoryPolicy,
   Platform,
-} from '../types/index.js';
+  PartnerLinkStatus,
+  NotificationType,
+  ThemePreference,
+} from '../types/index';
 
 // ---- Enum value arrays derived from type const objects ----
 
 const visibilityValues = Object.values(Visibility) as [Visibility, ...Visibility[]];
 const historyPolicyValues = Object.values(HistoryPolicy) as [HistoryPolicy, ...HistoryPolicy[]];
 const platformValues = Object.values(Platform) as [Platform, ...Platform[]];
+const partnerLinkStatusValues = Object.values(PartnerLinkStatus) as [PartnerLinkStatus, ...PartnerLinkStatus[]];
+const notificationTypeValues = Object.values(NotificationType) as [NotificationType, ...NotificationType[]];
 
-// ---- Shared field schemas ----
+const themeValues = Object.values(ThemePreference) as [ThemePreference, ...ThemePreference[]];
 
-const passwordSchema = z.string().min(8, 'Password must be at least 8 characters').max(128, 'Password must be at most 128 characters');
+// ---- Shared Validation Constants ----
+
+const BASE64_REGEX = /^(?:[A-Za-z0-9+\/]{4})*(?:[A-Za-z0-9+\/]{2}==|[A-Za-z0-9+\/]{3}=|[A-Za-z0-9+\/]{4})$/;
+const BASE64_ERROR = 'Invalid base64 encoding';
 
 // ---- Auth ----
 
 export const googleAuthSchema = z.object({
   code: z.string().min(1),
   codeVerifier: z.string().optional(),
-  redirectUri: z.string().url(),
+  redirectUri: z.url(),
 });
 
 export const appleAuthSchema = z.object({
   code: z.string().min(1),
   identityToken: z.string().min(1),
-  redirectUri: z.string().url(),
+  redirectUri: z.url(),
 });
 
 export const refreshTokenSchema = z.object({
   refreshToken: z.string().min(1),
-});
-
-export const emailAuthSchema = z.object({
-  email: z.string().email().toLowerCase().trim(),
-  password: passwordSchema,
-});
-
-export const registerSchema = z.object({
-  email: z.string().email().toLowerCase().trim(),
-  password: passwordSchema,
-  displayName: z.string().trim().min(1).max(100),
 });
 
 // ---- Auth Response Schemas ----
@@ -51,21 +48,21 @@ export const authResponseSchema = z.object({
   refreshToken: z.string(),
   expiresIn: z.number().int().positive(),
   user: z.object({
-    id: z.string().uuid(),
-    email: z.string().email(),
+    id: z.guid(),
+    email: z.email(),
     displayName: z.string().nullable(),
-    avatarUrl: z.string().url().nullable().optional(),
+    avatarUrl: z.url().nullable(),
   }),
 });
 
 // ---- Entries ----
 
 export const createEntrySchema = z.object({
-  contentEncrypted: z.string().trim().min(1), // base64-encoded
-  titleEncrypted: z.string().trim().optional(), // base64-encoded
+  contentEncrypted: z.string().min(1).regex(BASE64_REGEX, BASE64_ERROR), // base64-encoded — do NOT trim (may corrupt encoding)
+  titleEncrypted: z.string().min(1).regex(BASE64_REGEX, BASE64_ERROR).optional(), // base64-encoded
   visibility: z.enum(visibilityValues).default('PRIVATE'),
-  circleId: z.string().uuid().optional(),
-  mood: z.string().trim().max(20).optional(),
+  circleId: z.guid().optional(),
+  mood: z.string().trim().min(1).max(20).optional(),
 }).refine(
   (data) => {
     if (data.visibility === 'CIRCLE' || data.visibility === 'FUTURE_CIRCLE_ONLY') {
@@ -77,11 +74,11 @@ export const createEntrySchema = z.object({
 );
 
 export const updateEntrySchema = z.object({
-  contentEncrypted: z.string().trim().min(1),
-  titleEncrypted: z.string().trim().optional(),
+  contentEncrypted: z.string().min(1).regex(BASE64_REGEX, BASE64_ERROR).optional(), // base64-encoded — do NOT trim
+  titleEncrypted: z.string().min(1).regex(BASE64_REGEX, BASE64_ERROR).optional(), // base64-encoded
   visibility: z.enum(visibilityValues).optional(),
-  circleId: z.string().uuid().optional().nullable(),
-  mood: z.string().trim().max(20).optional().nullable(),
+  circleId: z.guid().optional().nullable(),
+  mood: z.string().trim().min(1).max(20).optional().nullable(),
   version: z.number().int().positive(), // required for conflict detection
 }).refine(
   (data) => {
@@ -92,22 +89,26 @@ export const updateEntrySchema = z.object({
     if (data.visibility === 'PRIVATE' || data.visibility === 'PARTNER') {
       return !data.circleId;
     }
+    // When visibility is not provided, reject circleId without visibility context
+    if (data.circleId !== undefined && data.circleId !== null) {
+      return false;
+    }
     return true;
   },
-  { message: 'circleId required for CIRCLE/FUTURE_CIRCLE_ONLY, must be null for PRIVATE/PARTNER' },
+  { message: 'circleId required for CIRCLE/FUTURE_CIRCLE_ONLY, must be null for PRIVATE/PARTNER. Provide visibility when setting circleId.' },
 );
 
 export const entryResponseSchema = z.object({
-  id: z.string().uuid(),
-  authorId: z.string().uuid(),
+  id: z.guid(),
+  authorId: z.guid(),
   contentEncrypted: z.string(),
-  titleEncrypted: z.string().nullable().optional(),
+  titleEncrypted: z.string().nullable(),
   visibility: z.enum(visibilityValues),
-  circleId: z.string().uuid().nullable().optional(),
-  mood: z.string().nullable().optional(),
+  circleId: z.guid().nullable(),
+  mood: z.string().nullable(),
   version: z.number().int(),
-  createdAt: z.string().datetime(),
-  updatedAt: z.string().datetime(),
+  createdAt: z.iso.datetime(),
+  updatedAt: z.iso.datetime(),
 });
 
 // ---- Partner ----
@@ -120,13 +121,16 @@ export const partnerRespondSchema = z.object({
 
 export const createCircleSchema = z.object({
   name: z.string().trim().min(1).max(100),
-  description: z.string().trim().max(500).optional(),
+  description: z.string().trim().min(1).max(500).optional(),
 });
 
 export const updateCircleSchema = z.object({
   name: z.string().trim().min(1).max(100).optional(),
-  description: z.string().trim().max(500).optional(),
-});
+  description: z.string().trim().min(1).max(500).optional().nullable(),
+}).refine(
+  (data) => Object.values(data).some((v) => v !== undefined),
+  { message: 'At least one field must be provided' },
+);
 
 export const joinCircleSchema = z.object({
   inviteCode: z.string().trim().min(1),
@@ -134,36 +138,87 @@ export const joinCircleSchema = z.object({
 });
 
 export const transferAdminSchema = z.object({
-  newAdminUserId: z.string().uuid(),
+  newAdminUserId: z.guid(),
 });
 
 export const circleResponseSchema = z.object({
-  id: z.string().uuid(),
+  id: z.guid(),
   name: z.string(),
-  description: z.string().nullable().optional(),
-  inviteCode: z.string(),
-  createdAt: z.string().datetime(),
-  updatedAt: z.string().datetime(),
+  description: z.string().nullable(),
+  inviteCode: z.string().nullable(), // Only returned for OWNER role
+  memberCount: z.number().int().optional(),
+  status: z.enum(['ACTIVE', 'ARCHIVED']).optional(),
+  createdAt: z.iso.datetime(),
+  updatedAt: z.iso.datetime(),
 });
 
 // ---- Comments ----
 
 export const createCommentSchema = z.object({
-  contentEncrypted: z.string().trim().min(1),
+  contentEncrypted: z.string().min(1).regex(BASE64_REGEX, BASE64_ERROR), // base64-encoded — do NOT trim
 });
 
 export const commentResponseSchema = z.object({
-  id: z.string().uuid(),
-  entryId: z.string().uuid(),
-  authorId: z.string().uuid(),
+  id: z.guid(),
+  entryId: z.guid(),
+  authorId: z.guid(),
   contentEncrypted: z.string(),
-  createdAt: z.string().datetime(),
+  createdAt: z.iso.datetime(),
 });
 
 // ---- Reactions ----
 
 export const createReactionSchema = z.object({
-  emoji: z.string().trim().min(1).max(10),
+  emoji: z.string().trim().min(1).max(10).regex(
+    /^[\p{Emoji_Presentation}\p{Extended_Pictographic}\u{FE0F}\u{200D}\u{20E3}\u{E0020}-\u{E007F}]+$/u,
+    'Must contain only emoji characters',
+  ),
+});
+
+export const reactionResponseSchema = z.object({
+  id: z.guid(),
+  entryId: z.guid(),
+  userId: z.guid(),
+  emoji: z.string().min(1).max(10),
+  createdAt: z.iso.datetime(),
+});
+
+// ---- Notifications ----
+
+export const notificationResponseSchema = z.object({
+  id: z.guid(),
+  userId: z.guid(),
+  type: z.enum(notificationTypeValues),
+  title: z.string().nullable(),
+  body: z.string().nullable(),
+  data: z.record(z.string(), z.unknown()).nullable(),
+  read: z.boolean(),
+  readAt: z.iso.datetime().nullable(),
+  createdAt: z.iso.datetime(),
+});
+
+// ---- Partner Link ----
+
+export const partnerLinkResponseSchema = z.object({
+  id: z.guid(),
+  initiatorId: z.guid(),
+  partnerId: z.guid(), // DB column is NOT NULL
+  status: z.enum(partnerLinkStatusValues),
+  initiatedAt: z.iso.datetime(),
+  respondedAt: z.iso.datetime().nullable(),
+});
+
+// ---- Settings Response ----
+
+export const settingsResponseSchema = z.object({
+  theme: z.enum(themeValues),
+  notifyPartner: z.boolean(),
+  notifyCircle: z.boolean(),
+  notifyComments: z.boolean(),
+  notifyReactions: z.boolean(),
+  defaultVisibility: z.enum(visibilityValues),
+  locale: z.string().max(10),
+  timezone: z.string().nullable(),
 });
 
 // ---- Push Tokens ----
@@ -175,57 +230,75 @@ export const registerPushTokenSchema = z.object({
 
 // ---- Attachments ----
 
+export const MAX_ATTACHMENT_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
+
+export const ALLOWED_MIME_TYPES = [
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/heic',
+  'video/mp4',
+] as const;
+
 export const presignAttachmentSchema = z.object({
-  entryId: z.string().uuid(),
+  entryId: z.guid(),
   fileName: z.string().trim().min(1).max(255),
-  mimeType: z.enum(['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'video/mp4']),
+  mimeType: z.enum(ALLOWED_MIME_TYPES),
 });
 
 export const confirmAttachmentSchema = z.object({
   storageKey: z.string().min(1),
-  entryId: z.string().uuid(),
-  sizeBytes: z.number().int().positive().max(10 * 1024 * 1024), // 10MB
+  entryId: z.guid(),
+  sizeBytes: z.number().int().positive().max(MAX_ATTACHMENT_SIZE_BYTES),
 });
 
-// ---- Settings ----
+// ---- Settings Update ----
 
 export const updateSettingsSchema = z.object({
-  theme: z.enum(['system', 'light', 'dark']).optional(),
+  theme: z.enum(themeValues).optional(),
   notifyPartner: z.boolean().optional(),
   notifyCircle: z.boolean().optional(),
   notifyComments: z.boolean().optional(),
   notifyReactions: z.boolean().optional(),
   defaultVisibility: z.enum(visibilityValues).optional(),
-  locale: z.string().trim().max(10).optional(),
-  timezone: z.string().trim().max(50).optional(),
-});
+  locale: z.string().trim().min(1).max(10).optional(),
+  timezone: z.string().trim().max(50).optional().nullable(),
+}).refine(
+  (data) => Object.values(data).some((v) => v !== undefined),
+  { message: 'At least one field must be provided' },
+);
 
 // ---- Users ----
 
 export const updateUserSchema = z.object({
   displayName: z.string().trim().min(1).max(100).optional(),
-  avatarUrl: z.string().url().optional().nullable(),
-});
+  avatarUrl: z.url().refine((u) => u.startsWith('https://'), 'Avatar URL must use HTTPS').optional().nullable(),
+}).refine(
+  (data) => Object.values(data).some((v) => v !== undefined),
+  { message: 'At least one field must be provided' },
+);
 
 export const userResponseSchema = z.object({
-  id: z.string().uuid(),
-  email: z.string().email(),
+  id: z.guid(),
+  email: z.email(),
   displayName: z.string().nullable(),
-  avatarUrl: z.string().url().nullable().optional(),
-  createdAt: z.string().datetime(),
+  avatarUrl: z.url().nullable(),
+  createdAt: z.iso.datetime(),
 });
 
 // ---- Pagination ----
 
 export const paginationSchema = z.object({
-  cursor: z.string().optional(),
-  limit: z.coerce.number().int().min(1).max(100).default(20),
+  cursor: z.string().max(500).optional(),
+  limit: z.coerce.number().int().min(1).max(100).default(20)
+    .refine(Number.isFinite, 'limit must be a finite number'),
 });
 
 export const searchSchema = z.object({
   q: z.string().trim().min(1).max(200),
-  cursor: z.string().optional(),
-  limit: z.coerce.number().int().min(1).max(50).default(20),
+  cursor: z.string().max(500).optional(),
+  limit: z.coerce.number().int().min(1).max(50).default(20)
+    .refine(Number.isFinite, 'limit must be a finite number'),
 });
 
 export const paginatedResponseSchema = <T extends z.ZodTypeAny>(itemSchema: T) =>
@@ -243,8 +316,6 @@ export const paginatedResponseSchema = <T extends z.ZodTypeAny>(itemSchema: T) =
 export type GoogleAuthInput = z.infer<typeof googleAuthSchema>;
 export type AppleAuthInput = z.infer<typeof appleAuthSchema>;
 export type RefreshTokenInput = z.infer<typeof refreshTokenSchema>;
-export type EmailAuthInput = z.infer<typeof emailAuthSchema>;
-export type RegisterInput = z.infer<typeof registerSchema>;
 export type AuthResponse = z.infer<typeof authResponseSchema>;
 export type CreateEntryInput = z.infer<typeof createEntrySchema>;
 export type UpdateEntryInput = z.infer<typeof updateEntrySchema>;
@@ -255,8 +326,12 @@ export type CircleResponse = z.infer<typeof circleResponseSchema>;
 export type CreateCommentInput = z.infer<typeof createCommentSchema>;
 export type CommentResponse = z.infer<typeof commentResponseSchema>;
 export type CreateReactionInput = z.infer<typeof createReactionSchema>;
+export type ReactionResponse = z.infer<typeof reactionResponseSchema>;
 export type UpdateSettingsInput = z.infer<typeof updateSettingsSchema>;
 export type UpdateUserInput = z.infer<typeof updateUserSchema>;
 export type UserResponse = z.infer<typeof userResponseSchema>;
+export type NotificationResponse = z.infer<typeof notificationResponseSchema>;
+export type PartnerLinkResponse = z.infer<typeof partnerLinkResponseSchema>;
+export type SettingsResponse = z.infer<typeof settingsResponseSchema>;
 export type PaginationInput = z.infer<typeof paginationSchema>;
 export type SearchInput = z.infer<typeof searchSchema>;

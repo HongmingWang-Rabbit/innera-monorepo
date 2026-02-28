@@ -32,6 +32,27 @@ Users can use the app without any authentication for local-only journaling:
 **Guest → Authenticated migration:**
 When a guest signs in, prompt: "Import X local entries to your account?" If yes, encrypt and upload. If no, local entries remain local.
 
+## Route-Level Auth Guards
+
+Not all screens require authentication. The `RequireAuth` component (`packages/app/src/components/RequireAuth.tsx`) wraps protected screens and shows a sign-in prompt for unauthenticated/guest users.
+
+| Route | Auth required? | Notes |
+|-------|---------------|-------|
+| `/` (Home) | No | Shows empty state when not authenticated |
+| `/entry/*` (New, Detail, Edit) | No | Writing entries works without login |
+| `/settings` | No | Handles guest state internally (banner + defaults) |
+| `/login` | No | Login page itself |
+| `/circles`, `/circles/[id]` | **Yes** | Wrapped with `RequireAuth` |
+| `/partner` | **Yes** | Wrapped with `RequireAuth` |
+| `/notifications` | **Yes** | Wrapped with `RequireAuth` |
+
+**React Query hooks** also gate on auth status: all query hooks use `enabled: status === 'authenticated' && !isGuest` to prevent API calls from firing without a valid token. Mutations (create, update, delete) are not gated — they rely on call-site guards or API-level 401 responses.
+
+**RequireAuth behavior:**
+- `status === 'loading'` → shows `Spinner`
+- `status === 'unauthenticated'` or `isGuest` → shows a `Card` with lock icon, contextual message, and "Sign In" button (uses `router.replace` to avoid back-button loops)
+- `status === 'authenticated'` and not guest → renders children
+
 ## Token Strategy
 
 ```

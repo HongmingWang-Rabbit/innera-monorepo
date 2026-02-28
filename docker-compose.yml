@@ -7,7 +7,7 @@ services:
       POSTGRES_USER: innera
       POSTGRES_PASSWORD: innera_dev
     ports:
-      - '5432:5432'
+      - '127.0.0.1:5432:5432'
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -15,18 +15,22 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-    mem_limit: 512m
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+    # shared_buffers should be ~25% of memory limit to avoid OOM risk
     command: >
       postgres
       -c max_connections=100
-      -c shared_buffers=256MB
+      -c shared_buffers=128MB
 
   # REDIS_URL: redis://:devpassword@localhost:6379
   redis:
     image: redis:7-alpine
     restart: unless-stopped
     ports:
-      - '6379:6379'
+      - '127.0.0.1:6379:6379'
     volumes:
       - redisdata:/data
     healthcheck:
@@ -34,18 +38,22 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-    command: redis-server --requirepass devpassword
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+    command: redis-server --requirepass devpassword --maxmemory 128mb --maxmemory-policy allkeys-lru --save "" --appendonly no
 
   # S3_ENDPOINT: http://localhost:9000
   minio:
     image: minio/minio:RELEASE.2025-02-18T16-25-55Z
     restart: unless-stopped
     ports:
-      - '9000:9000'
-      - '9001:9001'
+      - '127.0.0.1:9000:9000'
+      - '127.0.0.1:9001:9001'
     environment:
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadmin
+      MINIO_ROOT_USER: innera_dev
+      MINIO_ROOT_PASSWORD: innera_minio_dev
     volumes:
       - miniodata:/data
     healthcheck:
@@ -53,7 +61,10 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-    mem_limit: 256m
+    deploy:
+      resources:
+        limits:
+          memory: 256m
     command: server /data --console-address ":9001"
 
   # Auto-create the default bucket on first run
@@ -65,7 +76,7 @@ services:
     restart: "no"
     entrypoint: >
       /bin/sh -c "
-      mc alias set local http://minio:9000 minioadmin minioadmin;
+      mc alias set local http://minio:9000 innera_dev innera_minio_dev;
       mc mb --ignore-existing local/innera-attachments;
       echo 'Bucket innera-attachments created';
       "

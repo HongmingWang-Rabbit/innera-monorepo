@@ -51,7 +51,7 @@ packages/
   shared/   → Zod schemas, TypeScript types, permission helpers, AppError
   db/       → Drizzle ORM schema, PostgreSQL client, migrations
   ui/       → Tamagui design system: Button, Card, Input, Text components
-  app/      → Shared screens & navigation (consumed by both web and mobile)
+  app/      → Shared screens, components (RequireAuth, ScreenContainer), hooks & navigation
 ```
 
 ### Dependency Graph (no circular deps)
@@ -72,6 +72,17 @@ shared ← ui ← app ← web
 ### Cross-Platform Screen Sharing
 
 Screens live in `packages/app/src/screens/` and are consumed by both `apps/web` (via Next.js App Router pages) and `apps/mobile` (via Expo Router). Navigation uses Solito's `useLink()` for universal path-based routing. All screens import UI components from `@innera/ui`, never directly from `tamagui`.
+
+### Auth Guards & Route Protection
+
+Not all routes require login. Journaling (home, entries, settings) works without auth; social features require it.
+
+- **Unprotected:** `/` (home), `/entry/*`, `/settings`, `/login`
+- **Protected:** `/circles`, `/partner`, `/notifications` — wrapped with `RequireAuth` from `@innera/app`
+
+`RequireAuth` (`packages/app/src/components/RequireAuth.tsx`) shows a sign-in prompt card for unauthenticated/guest users. Uses `router.replace` to avoid back-button loops.
+
+**React Query hooks** use `enabled: status === 'authenticated' && !isGuest` to prevent API calls without a valid token. This applies to all query hooks in `packages/app/src/hooks/`.
 
 ### Fastify API Structure
 
@@ -96,11 +107,22 @@ Schema is in `packages/db/src/schema.ts` — ~22 tables with pgEnums. Key patter
 
 ### Tamagui UI Components
 
-`packages/ui` provides `Button`, `Card`, `Input`, `Text` (with `Heading`, `Caption`, `Label` variants) built on Tamagui's `styled()`. Config in `tamagui.config.ts` defines size/space/radius tokens and light/dark themes with a full color palette. Components use **named variants** not raw tokens:
+`packages/ui` provides `Button`, `Card`, `Input`, `Text` (with `Heading`, `Caption`, `Label` variants), `Badge`, `IconBadge`, `StatCard`, `EmptyState` built on Tamagui's `styled()`. Components use **named variants** not raw tokens:
 - Button sizes: `"sm" | "md" | "lg"`, variants: `"primary" | "secondary" | "ghost" | "danger"`
 - Card padding: `"none" | "sm" | "md" | "lg" | "xl"`, variants: `"elevated" | "flat"`
 - Card does NOT have a `bordered` prop (has default border)
+- Card does NOT have `overflow: 'hidden'` — edge children must set their own `borderRadius`
 - Button does NOT have `color` or `icon` props
+
+### Tamagui Theme & Design Tokens
+
+Config in `tamagui.config.ts` defines size/space/radius tokens and light/dark themes.
+
+- **Light theme uses warm backgrounds**: `warmWhite` (#FDFBF7) for `background`/`surface1`, `warmGray50`/`warmGray100` for `surface2`/`surface3` and hover/press/focus states. Dark theme unchanged.
+- **Semantic tokens**: `primary`, `secondary`, `danger`, `success`, `warning`, `error`, `info`, `headerWarm`, `colorSubtle`
+- **`colorSubtle`**: gray600 in light (WCAG AA+ ~7.5:1 contrast), gray400 in dark
+- **`headerWarm`**: warm tint for greeting/hero headers (light: `#FFF8F0`, dark: `gray900`)
+- **Raw palette constants** in `packages/app/src/constants.ts` mirror tamagui palette values for contexts that can't use theme tokens (React Navigation tab bar, Lucide icon `color` props)
 
 ### Encryption Model
 
@@ -121,7 +143,7 @@ Redis-backed queues for: push notifications, import/export, account deletion (7-
 ## Architecture Docs
 
 Detailed docs in `docs/architecture/` (18 files). Key references:
-- `02-auth.md` — OAuth flows, guest mode, token lifecycle
+- `02-auth.md` — OAuth flows, guest mode, token lifecycle, route-level auth guards
 - `03-encryption.md` — Key hierarchy, rotation, search on encrypted data
 - `12-db-schema.md` — Full Drizzle schema with all tables
 - `13-api-design.md` — All API routes, pagination, file uploads

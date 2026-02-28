@@ -12,18 +12,17 @@
     "lint": "eslint src/"
   },
   "dependencies": {
-    "@tamagui/config": "^1.116.0",
-    "@tamagui/core": "^1.116.0",
-    "tamagui": "^1.116.0"
+    "@tamagui/core": "^2.0.0-rc.16",
+    "tamagui": "^2.0.0-rc.16"
   },
   "peerDependencies": {
-    "react": "^18.3.0",
-    "react-native": "^0.76.0"
+    "react": "^19.1.0",
+    "react-native": "^0.81.0"
   },
   "devDependencies": {
-    "typescript": "^5.7.3",
-    "@types/react": "^18.3.0",
-    "react": "^18.3.0",
-    "react-native": "^0.76.0"
+    "typescript": "^5.9.3",
+    "@types/react": "~19.1.10",
+    "react": "^19.1.0",
+    "react-native": "^0.81.0"
   }
 }

@@ -10,14 +10,16 @@ const attachmentsRoutes: FastifyPluginAsync = async (app) => {
    */
   app.post('/attachments/presign', {
     preHandler: [authenticate],
+    config: { rateLimit: { max: 20, timeWindow: '1 minute' } },
   }, async (request, reply) => {
     void request.user;
     const body = presignAttachmentSchema.parse(request.body);
     void body;
     // TODO: generate presigned URL
-    return reply.status(201).send({
-      statusCode: 201,
-      data: { message: 'TODO' },
+    return reply.status(501).send({
+      statusCode: 501,
+      code: 'NOT_IMPLEMENTED',
+      message: 'Attachment presigning deferred to post-MVP',
     });
   });
 
@@ -27,14 +29,16 @@ const attachmentsRoutes: FastifyPluginAsync = async (app) => {
    */
   app.post('/attachments/confirm', {
     preHandler: [authenticate],
+    config: { rateLimit: { max: 20, timeWindow: '1 minute' } },
   }, async (request, reply) => {
     void request.user;
     const body = confirmAttachmentSchema.parse(request.body);
     void body;
     // TODO: confirm attachment upload
-    return reply.status(200).send({
-      statusCode: 200,
-      data: { message: 'TODO' },
+    return reply.status(501).send({
+      statusCode: 501,
+      code: 'NOT_IMPLEMENTED',
+      message: 'Attachment confirmation deferred to post-MVP',
     });
   });
 
@@ -58,9 +62,10 @@ const attachmentsRoutes: FastifyPluginAsync = async (app) => {
     const { id } = request.params;
     void id;
     // TODO: generate download URL
-    return reply.status(200).send({
-      statusCode: 200,
-      data: { message: 'TODO' },
+    return reply.status(501).send({
+      statusCode: 501,
+      code: 'NOT_IMPLEMENTED',
+      message: 'Attachment download deferred to post-MVP',
     });
   });
 
@@ -84,7 +89,11 @@ const attachmentsRoutes: FastifyPluginAsync = async (app) => {
     const { id } = request.params;
     void id;
     // TODO: soft-delete attachment
-    return reply.status(204).send();
+    return reply.status(501).send({
+      statusCode: 501,
+      code: 'NOT_IMPLEMENTED',
+      message: 'Attachment deletion deferred to post-MVP',
+    });
   });
 };
 

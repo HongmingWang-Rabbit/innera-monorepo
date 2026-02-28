@@ -1,4 +1,6 @@
-import { styled, Input as TamaguiInput, type GetProps } from 'tamagui';
+import React, { useId } from 'react';
+import { styled, type GetProps, type TamaguiElement } from '@tamagui/core';
+import { Input as TamaguiInput, Text, YStack } from 'tamagui';
 
 // ---------------------------------------------------------------------------
 // Styled Input
@@ -13,7 +15,6 @@ const StyledInput = styled(TamaguiInput, {
   // Typography
   fontFamily: '$body',
   fontSize: '$4',
-  lineHeight: '$4',
   color: '$color',
 
   // Appearance
@@ -51,7 +52,6 @@ const StyledInput = styled(TamaguiInput, {
         paddingVertical: '$2',
         paddingHorizontal: '$3',
         fontSize: '$3',
-        lineHeight: '$3',
         borderRadius: '$3',
       },
       md: {
@@ -59,7 +59,6 @@ const StyledInput = styled(TamaguiInput, {
         paddingVertical: '$3',
         paddingHorizontal: '$4',
         fontSize: '$4',
-        lineHeight: '$4',
         borderRadius: '$4',
       },
       lg: {
@@ -67,7 +66,6 @@ const StyledInput = styled(TamaguiInput, {
         paddingVertical: '$4',
         paddingHorizontal: '$5',
         fontSize: '$5',
-        lineHeight: '$5',
         borderRadius: '$5',
       },
     },
@@ -92,7 +90,6 @@ const StyledInput = styled(TamaguiInput, {
     disabled: {
       true: {
         opacity: 0.5,
-        pointerEvents: 'none',
         cursor: 'not-allowed',
         backgroundColor: '$backgroundStrong',
       },
@@ -112,14 +109,35 @@ const StyledInput = styled(TamaguiInput, {
 
 export type InputProps = GetProps<typeof StyledInput> & {
   accessibilityLabel?: string;
+  errorText?: string;
 };
 
-export function Input({ accessibilityLabel, ...props }: InputProps) {
-  return (
+export const Input = React.forwardRef<TamaguiElement, InputProps>(function Input(
+  { accessibilityLabel, errorText, error, ...props },
+  ref,
+) {
+  const errorId = useId();
+  const effectiveError = error || !!errorText;
+
+  const input = (
     <StyledInput
-      accessibilityLabel={accessibilityLabel}
+      ref={ref}
       aria-label={accessibilityLabel}
+      aria-invalid={effectiveError ? true : undefined}
+      aria-describedby={errorText ? errorId : undefined}
+      error={effectiveError}
       {...props}
     />
   );
-}
+
+  if (!errorText) return input;
+
+  return (
+    <YStack>
+      {input}
+      <Text id={errorId} fontSize="$2" color="$error" marginTop="$1" role="alert">
+        {errorText}
+      </Text>
+    </YStack>
+  );
+});

@@ -2,7 +2,9 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "jsx": "react-jsx",
-    "types": ["react-native"]
+    "types": ["react-native"],
+    // TODO: Remove DOM lib once Tamagui v2 ships compiled .js (RC ships .ts that references HTMLElement)
+    "lib": ["ES2022", "DOM"]
   },
   "include": ["src"]
 }

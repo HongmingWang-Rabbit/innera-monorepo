@@ -14,33 +14,30 @@ const pushTokensRoutes: FastifyPluginAsync = async (app) => {
     const body = registerPushTokenSchema.parse(request.body);
     void body;
     // TODO: register push token
-    return reply.status(201).send({
-      statusCode: 201,
-      data: { message: 'TODO' },
+    return reply.status(501).send({
+      statusCode: 501,
+      code: 'NOT_IMPLEMENTED',
+      message: 'Push token registration deferred to post-MVP',
     });
   });
 
   /**
-   * DELETE /v1/push-tokens/:token
+   * DELETE /v1/push-tokens
    * Deregister a push notification token (e.g. on logout or permission revoked).
+   * Token is passed in the request body to avoid logging sensitive tokens in URLs.
    */
-  app.delete<{ Params: { token: string } }>('/push-tokens/:token', {
+  app.delete('/push-tokens', {
     preHandler: [authenticate],
-    schema: {
-      params: {
-        type: 'object',
-        required: ['token'],
-        properties: {
-          token: { type: 'string', minLength: 1, maxLength: 512 },
-        },
-      },
-    },
   }, async (request, reply) => {
     void request.user;
-    const { token } = request.params;
-    void token;
+    const body = registerPushTokenSchema.parse(request.body);
+    void body;
     // TODO: deregister push token
-    return reply.status(204).send();
+    return reply.status(501).send({
+      statusCode: 501,
+      code: 'NOT_IMPLEMENTED',
+      message: 'Push token deregistration deferred to post-MVP',
+    });
   });
 };
 
