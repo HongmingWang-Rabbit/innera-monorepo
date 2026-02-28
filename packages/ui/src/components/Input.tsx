@@ -1,7 +1,6 @@
 import React, { useId } from 'react';
 import { styled, type GetProps, type TamaguiElement } from '@tamagui/core';
 import { Input as TamaguiInput, Text, YStack } from 'tamagui';
-import type { TextInput } from 'react-native';
 
 // ---------------------------------------------------------------------------
 // Styled Input
